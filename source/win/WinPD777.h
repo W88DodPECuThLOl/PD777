@@ -10,11 +10,11 @@ protected:
     virtual void setFLS(const u8 value) override {}
     virtual void setFRS(const u8 value) override {}
     // input
-    virtual bool isPD1() override { return false; }
-    virtual bool isPD2() override { return false; }
-    virtual bool isPD3() override { return false; }
-    virtual bool isPD4() override { return false; }
-    virtual u8 readKIN() override { return ~0; }
+    virtual bool isPD1() override;
+    virtual bool isPD2() override;
+    virtual bool isPD3() override;
+    virtual bool isPD4() override;
+    virtual u8 readKIN() override;
 public:
     virtual void registerDump() override;
 };

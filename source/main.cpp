@@ -43,6 +43,7 @@ setupConsole()
 int main()
 {
     setupConsole();
+	HRESULT hr = CoInitializeEx( nullptr, COINIT_MULTITHREADED );
 
     WinPD777 cpu;
     cpu.init();

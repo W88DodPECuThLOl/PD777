@@ -1941,7 +1941,7 @@ void PD777::execute()
     }
 
     // @todo タイミングなどをちゃんとする必要がある
-    if(crtCounter++ == 22) {
+    if(crtCounter++ == 26) {
         crtCounter = 0;
         const auto prevVBLK = crt.isVBLK();
         crt.step();
@@ -2006,44 +2006,47 @@ PD777::makePresentImage()
     const u8 forgroundColor = 0;
 
     for(auto& m : frameBuffer) { m = bgColor; }
-    for(int index = 0; index <= 0x18; index++) {
+    for(s32 index = 0; index <= 0x18; ++index) {
         const auto data0 = ram[index * 4 + 0];
         const auto data1 = ram[index * 4 + 1];
         const auto data2 = ram[index * 4 + 2];
         const auto data3 = ram[index * 4 + 3];
 
-        auto prio = data0 & 1;
-        u32 y     = data0 >> 1;
-        u32 x     = data1;
-        u16 ptn  = data2;
-        auto y3   = data3 >> 4;
-        auto rgb  = ((data3 >> 1) & 7) | (prio << 3) | forgroundColor;
+        auto PRIO = data0 & 1;
+        u32 Y     = data0 >> 1;
+        u32 X     = data1;
+        u16 P     = data2;
+        auto y    = data3 >> 4;
+        auto rgb  = ((data3 >> 1) & 7) | (PRIO << 3) | forgroundColor;
+        auto ySUB = data3 & 1;
 
-        if(ptn < 0x70) {
-            auto base = (ptn - (ptn / 8)) * 7;
+        if(P < 0x70) {
+            auto base = (P - (P / 8)) * 7;
             for(int line = 0; line < 7; ++line) {
                 const auto pattern = patternRom[base + line];
-                if(pattern & 0x40) frameBuffer[x + 0 + (y + line)*frameBufferWidth] = rgb;
-                if(pattern & 0x20) frameBuffer[x + 1 + (y + line)*frameBufferWidth] = rgb;
-                if(pattern & 0x10) frameBuffer[x + 2 + (y + line)*frameBufferWidth] = rgb;
-                if(pattern & 0x08) frameBuffer[x + 3 + (y + line)*frameBufferWidth] = rgb;
-                if(pattern & 0x04) frameBuffer[x + 4 + (y + line)*frameBufferWidth] = rgb;
-                if(pattern & 0x02) frameBuffer[x + 5 + (y + line)*frameBufferWidth] = rgb;
-                if(pattern & 0x01) frameBuffer[x + 6 + (y + line)*frameBufferWidth] = rgb;
+                const auto yy = (Y + line) * frameBufferWidth;
+                if(pattern & 0x40) frameBuffer[X + 0 + yy] = rgb;
+                if(pattern & 0x20) frameBuffer[X + 1 + yy] = rgb;
+                if(pattern & 0x10) frameBuffer[X + 2 + yy] = rgb;
+                if(pattern & 0x08) frameBuffer[X + 3 + yy] = rgb;
+                if(pattern & 0x04) frameBuffer[X + 4 + yy] = rgb;
+                if(pattern & 0x02) frameBuffer[X + 5 + yy] = rgb;
+                if(pattern & 0x01) frameBuffer[X + 6 + yy] = rgb;
             }
         } else {
-            ptn -= 0x70;
-            auto base = (ptn - (ptn / 8)) * 7;
+            P -= 0x70;
+            auto base = (P - (P / 8)) * 7;
             for(int line = 0; line < 7; ++line) {
                 const auto pattern = patternRom8[base + line];
-                if(pattern & 0x80) frameBuffer[x + 0 + (y + line)*frameBufferWidth] = rgb;
-                if(pattern & 0x40) frameBuffer[x + 1 + (y + line)*frameBufferWidth] = rgb;
-                if(pattern & 0x20) frameBuffer[x + 2 + (y + line)*frameBufferWidth] = rgb;
-                if(pattern & 0x10) frameBuffer[x + 3 + (y + line)*frameBufferWidth] = rgb;
-                if(pattern & 0x08) frameBuffer[x + 4 + (y + line)*frameBufferWidth] = rgb;
-                if(pattern & 0x04) frameBuffer[x + 5 + (y + line)*frameBufferWidth] = rgb;
-                if(pattern & 0x02) frameBuffer[x + 6 + (y + line)*frameBufferWidth] = rgb;
-                if(pattern & 0x01) frameBuffer[x + 7 + (y + line)*frameBufferWidth] = rgb;
+                const auto yy = (Y + line) * frameBufferWidth;
+                if(pattern & 0x80) frameBuffer[X + 0 + yy] = rgb;
+                if(pattern & 0x40) frameBuffer[X + 1 + yy] = rgb;
+                if(pattern & 0x20) frameBuffer[X + 2 + yy] = rgb;
+                if(pattern & 0x10) frameBuffer[X + 3 + yy] = rgb;
+                if(pattern & 0x08) frameBuffer[X + 4 + yy] = rgb;
+                if(pattern & 0x04) frameBuffer[X + 5 + yy] = rgb;
+                if(pattern & 0x02) frameBuffer[X + 6 + yy] = rgb;
+                if(pattern & 0x01) frameBuffer[X + 7 + yy] = rgb;
             }
         }
     }

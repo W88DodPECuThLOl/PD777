@@ -254,11 +254,41 @@ protected:
     virtual bool isPD2() { return false; }
     virtual bool isPD3() { return false; }
     virtual bool isPD4() { return false; }
+
+	/**
+	 * @brief KINの値
+	 */
+	enum class KIN : u8 {
+		None = 0x00,
+
+		/**
+		 * @brief	ゲームスタートキー
+		 */
+		GameStartKey     = 0x01,
+		/**
+		 * @brief	ゲームセレクトキー
+		 */
+		GameSelectKey    = 0x08,
+		/**
+		 * @brief	ゲーム操作キー（レバースイッチ）の左
+		 */
+		LeverSwitchLeft  = 0x02,
+		/**
+		 * @brief	ゲーム操作キー（レバースイッチ）の右
+		 */
+		LeverSwitchRight = 0x04,
+		/**
+		 * @brief	ゲーム操作キー（アクションキー）のPUSH 1からPUSH 4
+		 * @todo	どれを押しても同じっぽい？
+		 */
+		PushAll          = 0x70,
+	};
     /**
-     * @brief 不明。キー等の入力？
-     * @return 不明。負論理
+     * @brief キーの入力
+     * @return 押下されているキーの論理和
+     * @see     enum KIN
      */
-    virtual u8 readKIN() { return ~0; }
+    virtual u8 readKIN() { return 0; }
     /**
      * @brief 不明。水平カウンタの取得？
      * @return 不明
