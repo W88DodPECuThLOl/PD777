@@ -1,11 +1,10 @@
 # μPD777エミュレータ
-μPD777のエミュレータ実験です。
 
 # これは何？
-μPD777のエミュレータです。
+μPD777というののエミュレータです。
 
 # ビルド環境
-* Windows用のみ
+* Windowsのみ
 * C++20
 * CMake
 
@@ -15,13 +14,13 @@
 3. ビルドします
 
 # todo
-* 入力処理
 * 命令の実装があっているのかどうか
+* サウンド
 * 物凄く重たい
-* BattleVaderのみ試して、他のものは未確認
 
 # 動作イメージなど
 ![Battle Vader](/wiki/image/BattleVader000.png)
 ![Battle Vader](/wiki/image/BattleVader001.png)
 ![Battle Vader](/wiki/image/BattleVader002.png)
-
+![Battle Vader](/wiki/image/Galaxian000.png)
+![Battle Vader](/wiki/image/Galaxian001.png)
