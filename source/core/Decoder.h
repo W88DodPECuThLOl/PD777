@@ -1,7 +1,6 @@
 ﻿#pragma once
 
 #include "catLowBasicTypes.h"
-#include "catLowMemory.h"
 
 /**
  * @brief   μPD777命令のデコーダ

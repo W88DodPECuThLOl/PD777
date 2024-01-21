@@ -259,8 +259,6 @@ PD777::execAddMKM(const u16 pc, const u16 code)
     // M+K=>M, N=>L
     // M[H[5:1],L[2:1]][7:1]+K[7:1]=>M[H[5:1],L[2:1]][7:1], Skip if carry, N=>L[2:1]
 
-    // @todo FIX ME!!!!
-
     const u8 N  = (code & 0b000001100000) >> 5;
     const u8 K  =  code & 0b000000011111;
     const u8 M  = readMemAtHL();
@@ -276,8 +274,6 @@ PD777::execSubMKM(const u16 pc, const u16 code)
 {
 //    snprintf(mnemonic, sizeof(mnemonic), "M-K<$%02X>=>M, N<%d>=>L", K, N);
 //    print(pc, code, mnemonic, u8"M[H[5:1],L[2:1]][7:1]-K[7:1]=>M[H[5:1],L[2:1]][7:1], Skip if borrow, N=>L[2:1]", u8"BOJ");
-
-    // @todo FIX ME!!!!
 
     const u8 N  = (code & 0b000001100000) >> 5;
     const u8 K  =  code & 0b000000011111;
@@ -957,7 +953,8 @@ PD777::execMoveA1toFLS(const u16 pc, const u16 code)
 //    print(pc, code, "A1=>FLS, 0x0=>L", u8"Move A1[7:1] to FLS[7:1], 0=>L[2:1]");
 
     const auto A1 = regs.getA1();
-    setFLS(A1);
+    sound.setFLS(A1);
+    setFLS(sound.getClockCounter(), A1);
     regs.setL(0);
 }
 
@@ -967,7 +964,8 @@ PD777::execMoveA1toFRS(const u16 pc, const u16 code)
 //    print(pc, code, "A1=>FRS, 0x1=>L", u8"Move A1[7:1] to FRS[7:1], 1=>L[2:1]");
 
     const auto A1 = regs.getA1();
-    setFRS(A1);
+    sound.setFRS(A1);
+    setFRS(sound.getClockCounter(), A1);
     regs.setL(1);
 }
 
@@ -1013,7 +1011,8 @@ PD777::execMoveA2toFLS(const u16 pc, const u16 code)
 //    print(pc, code, "A2=>FLS, 0x0=>L", u8"Move A2[7:1] to FLS[7:1], 0=>L[2:1]");
 
     const auto A2 = regs.getA2();
-    setFLS(A2);
+    sound.setFLS(A2);
+    setFLS(sound.getClockCounter(), A2);
     regs.setL(0);
 }
 
@@ -1023,7 +1022,8 @@ PD777::execMoveA2toFRS(const u16 pc, const u16 code)
 //    print(pc, code, "A2=>FRS, 0x1=>L", u8"Move A2[7:1] to FRS[7:1], 1=>L[2:1]");
 
     const auto A2 = regs.getA2();
-    setFRS(A2);
+    sound.setFRS(A2);
+    setFRS(sound.getClockCounter(), A2);
     regs.setL(1);
 }
 
@@ -1135,7 +1135,8 @@ PD777::execMoveMtoFLS(const u16 pc, const u16 code)
 
     // Move M[H[5:1],L[2:1]][7:1] to FLS[7:1], 0=>L[2:1]
     const auto value = readMemAtHL();
-    setFLS(value);
+    sound.setFLS(value);
+    setFLS(sound.getClockCounter(), value);
     regs.setL(0);
 }
 
@@ -1146,7 +1147,8 @@ PD777::execMoveMtoFRS(const u16 pc, const u16 code)
 
     // Move M[H[5:1],L[2:1]][7:1] to FRS[7:1], 1=>L[2:1]
     const auto value = readMemAtHL();
-    setFRS(value);
+    sound.setFRS(value);
+    setFRS(sound.getClockCounter(), value);
     regs.setL(1);
 }
 
@@ -1914,6 +1916,7 @@ PD777::init()
     crt.reset();
     stack.reset();
     regs.reset();
+    sound.reset();
 }
 
 void
@@ -1940,20 +1943,21 @@ void PD777::execute()
         regs.nextPC();
     }
 
-    // @todo タイミングなどをちゃんとする必要がある
-    if(crtCounter++ == 26) {
-        crtCounter = 0;
-        const auto prevVBLK = crt.isVBLK();
-        crt.step();
-        if(prevVBLK && !crt.isVBLK()) [[unlikely]] {
-            // 新しいフレーム
+    if(crt.step()) [[unlikely]] {
+        // 新しいフレーム
 
-            // イメージ作成
-            makePresentImage();
-            // 作成したイメージを画面に出力する
-            present();
-        }
+        // イメージ作成
+        makePresentImage();
+        // 作成したイメージを画面に出力する
+        present();
+
+        // サウンドを定期的に更新しておく
+        setFLS(sound.getClockCounter(), sound.getFLS());
+        setFRS(sound.getClockCounter(), sound.getFRS());
     }
+
+    // サウンド生成用のカウンタを加算
+    sound.updateCounter();
 }
 
 u8
@@ -2014,41 +2018,61 @@ PD777::makePresentImage()
 
         auto PRIO = data0 & 1;
         u32 Y     = data0 >> 1;
-        u32 X     = data1;
+        u32 SX    = data1;
         u16 P     = data2;
         auto y    = data3 >> 4;
         auto rgb  = ((data3 >> 1) & 7) | (PRIO << 3) | forgroundColor;
         auto ySUB = data3 & 1;
 
-        if(P < 0x70) {
-            auto base = (P - (P / 8)) * 7;
-            for(int line = 0; line < 7; ++line) {
-                const auto pattern = patternRom[base + line];
-                const auto yy = (Y + line) * frameBufferWidth;
-                if(pattern & 0x40) frameBuffer[X + 0 + yy] = rgb;
-                if(pattern & 0x20) frameBuffer[X + 1 + yy] = rgb;
-                if(pattern & 0x10) frameBuffer[X + 2 + yy] = rgb;
-                if(pattern & 0x08) frameBuffer[X + 3 + yy] = rgb;
-                if(pattern & 0x04) frameBuffer[X + 4 + yy] = rgb;
-                if(pattern & 0x02) frameBuffer[X + 5 + yy] = rgb;
-                if(pattern & 0x01) frameBuffer[X + 6 + yy] = rgb;
+        bool repeatY = false;
+        bool repeatX = false;
+        for(u16 i = 0; i < 0x100; i += 2) {
+            if(characterAttribute[i] >= 0x80) {
+                break;
             }
-        } else {
-            P -= 0x70;
-            auto base = (P - (P / 8)) * 7;
-            for(int line = 0; line < 7; ++line) {
-                const auto pattern = patternRom8[base + line];
-                const auto yy = (Y + line) * frameBufferWidth;
-                if(pattern & 0x80) frameBuffer[X + 0 + yy] = rgb;
-                if(pattern & 0x40) frameBuffer[X + 1 + yy] = rgb;
-                if(pattern & 0x20) frameBuffer[X + 2 + yy] = rgb;
-                if(pattern & 0x10) frameBuffer[X + 3 + yy] = rgb;
-                if(pattern & 0x08) frameBuffer[X + 4 + yy] = rgb;
-                if(pattern & 0x04) frameBuffer[X + 5 + yy] = rgb;
-                if(pattern & 0x02) frameBuffer[X + 6 + yy] = rgb;
-                if(pattern & 0x01) frameBuffer[X + 7 + yy] = rgb;
+            if(characterAttribute[i] == P) {
+                repeatX = (characterAttribute[i + 1] & 0x1) != 0;
+                repeatY = (characterAttribute[i + 1] & 0x2) != 0;
+                break;
             }
         }
+
+        do {
+            auto X = SX;
+            do {
+                if(P < 0x70) {
+                    auto base = (P - (P / 8)) * 7;
+                    for(int line = 0; line < 7; ++line) {
+                        const auto pattern = patternRom[base + line];
+                        const auto yy = (Y + line) * frameBufferWidth;
+                        if(pattern & 0x40) frameBuffer[X + 0 + yy] = rgb;
+                        if(pattern & 0x20) frameBuffer[X + 1 + yy] = rgb;
+                        if(pattern & 0x10) frameBuffer[X + 2 + yy] = rgb;
+                        if(pattern & 0x08) frameBuffer[X + 3 + yy] = rgb;
+                        if(pattern & 0x04) frameBuffer[X + 4 + yy] = rgb;
+                        if(pattern & 0x02) frameBuffer[X + 5 + yy] = rgb;
+                        if(pattern & 0x01) frameBuffer[X + 6 + yy] = rgb;
+                    }
+                    X += 7;
+                } else {
+                    auto base = (P - 0x70 - ((P - 0x70) / 8)) * 7;
+                    for(int line = 0; line < 7; ++line) {
+                        const auto pattern = patternRom8[base + line];
+                        const auto yy = (Y + line) * frameBufferWidth;
+                        if(pattern & 0x80) frameBuffer[X + 0 + yy] = rgb;
+                        if(pattern & 0x40) frameBuffer[X + 1 + yy] = rgb;
+                        if(pattern & 0x20) frameBuffer[X + 2 + yy] = rgb;
+                        if(pattern & 0x10) frameBuffer[X + 3 + yy] = rgb;
+                        if(pattern & 0x08) frameBuffer[X + 4 + yy] = rgb;
+                        if(pattern & 0x04) frameBuffer[X + 5 + yy] = rgb;
+                        if(pattern & 0x02) frameBuffer[X + 6 + yy] = rgb;
+                        if(pattern & 0x01) frameBuffer[X + 7 + yy] = rgb;
+                    }
+                    X += 8;
+                }
+            } while(repeatX && X <= (75+8));
+            Y += 7;
+        } while(repeatY && Y < (60+7));
     }
 }
 

@@ -35,6 +35,9 @@ setupConsole()
 {
     setConsoleTerminalMode();
     setConsoleCursorVisible(false);
+#if defined(_WIN32)
+	HRESULT hr = CoInitializeEx( nullptr, COINIT_MULTITHREADED );
+#endif
 }
 
 } // namespace
@@ -43,7 +46,6 @@ setupConsole()
 int main()
 {
     setupConsole();
-	HRESULT hr = CoInitializeEx( nullptr, COINIT_MULTITHREADED );
 
     WinPD777 cpu;
     cpu.init();

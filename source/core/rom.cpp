@@ -4,6 +4,10 @@
 // ROMやイメージを設定してください
 //
 
+#define CHAR_REPEATE_X  (0x1)
+#define CHAR_REPEATE_Y  (0x2)
+#define CHAR_REPEATE_XY (0x3)
+
 const u16 PD777::rawRom[4096] = {
 // Dump Result of µPD774 Battle Vader
 // https://www.oguchi-rd.com/777/ROM%20Dump/774%20Battle%20Vader/Program%20ROM/Battle%20Vader%20Program%20ROM%20Contents.pdf
@@ -933,4 +937,14 @@ const u8 PD777::patternRom8[98] = {
     0b00000000,
     0b00000000,
     0b00000000,
+};
+
+// キャラクタ属性
+const u8 PD777::characterAttribute[0x80*2] = {
+//  No.   属性
+    0x68, CHAR_REPEATE_Y,   // 例）キャラクタパターンの0x68を Y方向にリピートする
+    0x76, CHAR_REPEATE_XY,  // 例）キャラクタパターンの0x76を X方向とY方向にリピートする
+
+    // 最後の印
+    0xFF, 0
 };

@@ -1,13 +1,13 @@
 ﻿#pragma once
 
 #include "catLowBasicTypes.h"
-#include "catLowMemory.h"
 
 #include "CRT.h"
 #include "Decoder.h"
 #include "Disassembler.h"
 #include "Stack.h"
 #include "Registers.h"
+#include "Sound.h"
 
 /**
  * @brief   μPD777
@@ -27,12 +27,17 @@ protected:
      * @brief 8x7パターン用のROM
      */
     static const u8 patternRom8[98];
+    /**
+     * @brief パターンの属性
+     */
+    static const u8 characterAttribute[0x80*2];
 
     u16 rom[0x800];
     u8  ram[0x80];
     CRT crt;
     Registers regs;
     Stack stack;
+    Sound sound;
 
     // presentで使うフレームバッファ
     static constexpr u32 frameBufferHeight = 128;
@@ -225,7 +230,7 @@ protected:
     // grah
     /**
      * @brief present()で使用するイメージを作成する
-     * 128x128のframeBufferに0～7の値でイメージが作成される。
+     * 128x128のframeBufferにイメージが作成される。
      */
     virtual void makePresentImage();
     /**
@@ -238,12 +243,12 @@ protected:
      * @brief Lチャンネルのサウンドの音程を設定する
      * @param[in]   value   音程。1は無音
      */
-    virtual void setFLS(const u8 value) {}
+    virtual void setFLS(const s64 clockCounter, const u8 value) {}
     /**
      * @brief Rチャンネルのサウンドの音程を設定する
      * @param[in]   value   音程。1は無音
      */
-    virtual void setFRS(const u8 value) {}
+    virtual void setFRS(const s64 clockCounter, const u8 value) {}
 
     // input
     /**
@@ -293,7 +298,7 @@ protected:
      * @brief 不明。水平カウンタの取得？
      * @return 不明
      */
-    virtual u8 readHCL() { return crt.geHorizontalCounter(); }
+    virtual u8 readHCL() { return crt.getHorizontalCounter(); }
 
 public:
     // for debug

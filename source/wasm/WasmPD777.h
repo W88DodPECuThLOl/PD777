@@ -7,8 +7,8 @@ protected:
     // grah
     virtual void present() override;
     // sound
-    virtual void setFLS(const u8 value) override {}
-    virtual void setFRS(const u8 value) override {}
+    virtual void setFLS(const s64 clockCounter, const u8 value) override {}
+    virtual void setFRS(const s64 clockCounter, const u8 value) override {}
     // input
     virtual bool isPD1() override { return false; }
     virtual bool isPD2() override { return false; }
