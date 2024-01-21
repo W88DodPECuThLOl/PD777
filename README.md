@@ -15,10 +15,9 @@
 
 # todo
 * 命令の実装があっているのかどうか
-* サウンド
-* 物凄く重たい
+* 斜めのピクセル
 
-# 動作イメージなど
+# 動作イメージ
 ![Battle Vader](/wiki/image/BattleVader000.png)
 ![Battle Vader](/wiki/image/BattleVader001.png)
 ![Battle Vader](/wiki/image/BattleVader002.png)
