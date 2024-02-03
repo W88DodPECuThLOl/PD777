@@ -22,3 +22,4 @@
 ![Battle Vader](/wiki/image/BattleVader002.png)
 ![Battle Vader](/wiki/image/Galaxian000.png)
 ![Battle Vader](/wiki/image/Galaxian001.png)
+![Battle Vader](/wiki/image/Galaxian002.png)
