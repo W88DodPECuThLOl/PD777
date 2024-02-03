@@ -15,7 +15,6 @@
 
 # todo
 * 命令の実装があっているのかどうか
-* 斜めのピクセル
 
 # 動作イメージ
 ![Battle Vader](/wiki/image/BattleVader000.png)
