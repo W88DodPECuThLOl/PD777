@@ -1994,22 +1994,144 @@ PD777::setMode(const u8 mode)
     regs.setMode(mode);
 }
 
+#define MakeRGB(r,g,b) ((b) | ((g) << 8) | ((r) << 16))
+
+/**
+ * @brief 背景色をRGB値へ変換するときのテーブル
+ * @todo  ちゃんとした値を設定すること
+ */
+static const u32 tblBGtoRGB[64] = {
+                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
+                                // 0         : 0 : 0        :000
+    MakeRGB(0x00, 0xAE, 0xEF),  // ブルーシアン
+
+                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
+                                // 0         : 0 : 0        :001
+    MakeRGB(0x00, 0x00, 0xFF),  // 青
+
+                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
+                                // 0         : 0 : 0        :010
+    MakeRGB(0x00, 0xFF, 0x00),  // 緑
+
+                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
+                                // 0         : 0 : 0        :011
+    MakeRGB(0xE4, 0x00, 0x7F),  // マゼンタ
+
+                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
+                                // 0         : 0 : 0        :100
+    MakeRGB(208, 46, 61),       // 赤
+
+                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
+                                // 0         : 0 : 0        :101
+    MakeRGB(0x00, 0xA0, 0xE9),  // シアン
+
+                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
+                                // 0         : 0 : 0        :110
+    MakeRGB(0xFF, 0xFF, 0x00),  // 黄
+
+                                // BRIGHTNESS:HUE:BLACK/PRIO:BGR
+                                // 0         : 0 : 0        :111
+    MakeRGB(0xF5, 0x82, 0x20),  // オレンジ
+//--------------------------------------------------------------------
+//--------------------------------------------------------------------
+                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
+                                // 0         : 0 : 1        :000
+    MakeRGB(0x00, 0x00, 0x00),  // 黒
+
+                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
+                                // 0         : 0 : 1        :001
+    MakeRGB(0x00, 0x00, 0xFF),  // 青
+
+                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
+                                // 0         : 0 : 1        :010
+    MakeRGB(0x00, 0xFF, 0x00),  // 緑
+
+                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
+                                // 0         : 0 : 1        :011
+    MakeRGB(0xE4, 0x00, 0x7F),  // マゼンタ
+
+                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
+                                // 0         : 0 : 1        :100
+    MakeRGB(0xFF, 0x00, 0x00),  // 赤
+
+                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
+                                // 0         : 0 : 1        :101
+    MakeRGB(0x00, 0xA0, 0xE9),  // シアン
+
+                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
+                                // 0         : 0 : 1        :110
+    MakeRGB(0xFF, 0xFF, 0x00),  // 黄
+
+                                // BRIGHTNESS:HUE:BLACK/PRIO:BGR
+                                // 0         : 0 : 1        :111
+    MakeRGB(0xFF, 0xFF, 0xFF),  // 白
+};
+
+static const u32 tblSpriteToRGB[16] = {
+    // PRIO:RGB
+    MakeRGB(0x00, 0x00, 0x00),
+    MakeRGB(95,    159,  169),  // 青のインベーダーの色、シェルターの色
+    MakeRGB(170,   223,    8),  // 緑のインベーダーの色
+    MakeRGB(98, 206, 170),  // 
+    MakeRGB(208, 131, 164),     // 赤のインベーダーの色
+    MakeRGB(208, 136, 203),     // 上から２番目のインベーダーの色
+    MakeRGB(209, 185, 0),       // 黄のインベーダーの色
+    MakeRGB(0xFF, 0xFF, 0xFF),
+
+    MakeRGB(0x00, 0x00, 0x00),
+    MakeRGB(132, 195, 204),  // 左上の数値
+    MakeRGB(0x00, 0xFF, 0x00),
+    MakeRGB(0x00, 0xFF, 0xFF),
+    MakeRGB(0xFF, 0x00, 0x00),
+    MakeRGB(0xFF, 0x00, 0xFF),
+    MakeRGB(0xFF, 0xFF, 0x00),
+    MakeRGB(0xFF, 0xFF, 0xFF),
+};
+
+void
+PD777::pset(s32 x, s32 y, u32 rgb, bool bent1, bool bent2)
+{
+    x *= 4;
+    y *= 4;
+
+    if(bent1) {
+        // 斜め
+        for(s32 yy = 0; yy < 4; ++yy) {
+            //for(s32 xx = 0; xx < 4; ++xx) { // @todo 4dotだとUFOに隙間ができてしまう
+            for(s32 xx = 0; xx < 8; ++xx) {
+                frameBuffer[x + xx + yy + (y + yy) * frameBufferWidth] = rgb;
+            }
+        }
+    } else if(bent2) {
+        // 斜め
+        for(s32 yy = 0; yy < 4; ++yy) {
+            //for(s32 xx = 0; xx < 4; ++xx) { // @todo 4dotだとUFOに隙間ができてしまう
+            for(s32 xx = 0; xx < 8; ++xx) {
+                frameBuffer[x + xx + 4 - yy + (y + yy) * frameBufferWidth] = rgb;
+            }
+        }
+    } else {
+        for(s32 yy = 0; yy < 4; ++yy) {
+            for(s32 xx = 0; xx < 4; ++xx) {
+                frameBuffer[x + xx + (y + yy) * frameBufferWidth] = rgb;
+            }
+        }
+    }
+}
+
 void
 PD777::makePresentImage()
 {
-    // @todo
     const auto modeRegister = regs.getMode();
     auto modeBrightness = modeRegister & 0x20; // BRIGHTNESS
     auto modeHUE        = modeRegister & 0x10; // HUE
     auto bgBlackPrio    = modeRegister & 0x08; // BLACK/PRIO
     auto bgRGB          = modeRegister & 0x07; // RGB
-    //u8 bgColor = bgRGB | (modeBrightness | modeHUE | bgBlackPrio); // RGB
-    u8 bgColor = bgRGB; // RGB
 
-    //const u8 forgroundColor = (modeBrightness | modeHUE | bgBlackPrio) << 1;
-    const u8 forgroundColor = 0;
-
+    // 背景色
+    const auto bgColor = tblBGtoRGB[bgRGB | bgBlackPrio /* | modeHUE | modeBrightness */]; // @todo
     for(auto& m : frameBuffer) { m = bgColor; }
+    // スプライト
     for(s32 index = 0; index <= 0x18; ++index) {
         const auto data0 = ram[index * 4 + 0];
         const auto data1 = ram[index * 4 + 1];
@@ -2021,11 +2143,15 @@ PD777::makePresentImage()
         u32 SX    = data1;
         u16 P     = data2;
         auto y    = data3 >> 4;
-        auto rgb  = ((data3 >> 1) & 7) | (PRIO << 3) | forgroundColor;
+        u32 rgb  = ((data3 >> 1) & 7) | (PRIO << 3); // | forgroundColor; // prio rgb
         auto ySUB = data3 & 1;
+
+        rgb = tblSpriteToRGB[rgb]; // PRIO:RGB
 
         bool repeatY = false;
         bool repeatX = false;
+        bool shear1  = false;
+        bool shear2  = false;
         for(u16 i = 0; i < 0x100; i += 2) {
             if(characterAttribute[i] >= 0x80) {
                 break;
@@ -2033,6 +2159,8 @@ PD777::makePresentImage()
             if(characterAttribute[i] == P) {
                 repeatX = (characterAttribute[i + 1] & 0x1) != 0;
                 repeatY = (characterAttribute[i + 1] & 0x2) != 0;
+                shear1  = (characterAttribute[i + 1] & 0x4) != 0;
+                shear2  = (characterAttribute[i + 1] & 0x8) != 0;
                 break;
             }
         }
@@ -2045,13 +2173,13 @@ PD777::makePresentImage()
                     for(int line = 0; line < 7; ++line) {
                         const auto pattern = patternRom[base + line];
                         const auto yy = (Y + line) * frameBufferWidth;
-                        if(pattern & 0x40) frameBuffer[X + 0 + yy] = rgb;
-                        if(pattern & 0x20) frameBuffer[X + 1 + yy] = rgb;
-                        if(pattern & 0x10) frameBuffer[X + 2 + yy] = rgb;
-                        if(pattern & 0x08) frameBuffer[X + 3 + yy] = rgb;
-                        if(pattern & 0x04) frameBuffer[X + 4 + yy] = rgb;
-                        if(pattern & 0x02) frameBuffer[X + 5 + yy] = rgb;
-                        if(pattern & 0x01) frameBuffer[X + 6 + yy] = rgb;
+                        if(pattern & 0x40) pset(X + 0, Y + line, rgb, shear1, shear2);
+                        if(pattern & 0x20) pset(X + 1, Y + line, rgb, shear1, shear2);
+                        if(pattern & 0x10) pset(X + 2, Y + line, rgb, shear1, shear2);
+                        if(pattern & 0x08) pset(X + 3, Y + line, rgb, shear1, shear2);
+                        if(pattern & 0x04) pset(X + 4, Y + line, rgb, shear1, shear2);
+                        if(pattern & 0x02) pset(X + 5, Y + line, rgb, shear1, shear2);
+                        if(pattern & 0x01) pset(X + 6, Y + line, rgb, shear1, shear2);
                     }
                     X += 7;
                 } else {
@@ -2059,14 +2187,14 @@ PD777::makePresentImage()
                     for(int line = 0; line < 7; ++line) {
                         const auto pattern = patternRom8[base + line];
                         const auto yy = (Y + line) * frameBufferWidth;
-                        if(pattern & 0x80) frameBuffer[X + 0 + yy] = rgb;
-                        if(pattern & 0x40) frameBuffer[X + 1 + yy] = rgb;
-                        if(pattern & 0x20) frameBuffer[X + 2 + yy] = rgb;
-                        if(pattern & 0x10) frameBuffer[X + 3 + yy] = rgb;
-                        if(pattern & 0x08) frameBuffer[X + 4 + yy] = rgb;
-                        if(pattern & 0x04) frameBuffer[X + 5 + yy] = rgb;
-                        if(pattern & 0x02) frameBuffer[X + 6 + yy] = rgb;
-                        if(pattern & 0x01) frameBuffer[X + 7 + yy] = rgb;
+                        if(pattern & 0x80) pset(X + 0, Y + line, rgb, shear1, shear2);
+                        if(pattern & 0x40) pset(X + 1, Y + line, rgb, shear1, shear2);
+                        if(pattern & 0x20) pset(X + 2, Y + line, rgb, shear1, shear2);
+                        if(pattern & 0x10) pset(X + 3, Y + line, rgb, shear1, shear2);
+                        if(pattern & 0x08) pset(X + 4, Y + line, rgb, shear1, shear2);
+                        if(pattern & 0x04) pset(X + 5, Y + line, rgb, shear1, shear2);
+                        if(pattern & 0x02) pset(X + 6, Y + line, rgb, shear1, shear2);
+                        if(pattern & 0x01) pset(X + 7, Y + line, rgb, shear1, shear2);
                     }
                     X += 8;
                 }

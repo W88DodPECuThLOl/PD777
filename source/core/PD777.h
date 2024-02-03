@@ -40,14 +40,13 @@ protected:
     Sound sound;
 
     // presentで使うフレームバッファ
-    static constexpr u32 frameBufferHeight = 128;
-    static constexpr u32 frameBufferWidth = 128;
-    u8 frameBuffer[frameBufferHeight*frameBufferWidth];
+    static constexpr u32 frameBufferHeight = 128*4;
+    static constexpr u32 frameBufferWidth = 128*4;
+    u32 frameBuffer[frameBufferHeight*frameBufferWidth];
 #if defined(_WIN32)
     // for debug
     Disassembler disassembler;
 #endif // defined(_WIN32)
-    u32 crtCounter = 0;
 private:
     /**
      * @brief   romをセットアップする
@@ -228,6 +227,7 @@ protected:
     virtual u8   readMem(const u16 address);
 
     // grah
+    virtual void pset(s32 x, s32 y, u32 rgb, bool bent1, bool bent2);
     /**
      * @brief present()で使用するイメージを作成する
      * 128x128のframeBufferにイメージが作成される。

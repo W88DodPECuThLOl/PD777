@@ -7,6 +7,68 @@
 
 #pragma comment (lib, "Winmm.lib")
 
+class WinImage {
+public:
+    static constexpr s32 WIDTH = 80*4;
+    static constexpr s32 HEIGHT = 60*4;
+
+    BITMAPINFO bmpInfo;
+    LPDWORD lpPixel = 0;
+
+    HBITMAP hBitmap;
+    HDC hMemDC;
+
+    HWND hwnd;
+
+    void make(HWND hwnd)
+    {
+        this->hwnd = hwnd;
+
+        //DIBの情報を設定する
+        bmpInfo.bmiHeader.biSize=sizeof(BITMAPINFOHEADER);
+        bmpInfo.bmiHeader.biWidth=WIDTH;
+        bmpInfo.bmiHeader.biHeight=-HEIGHT;
+        bmpInfo.bmiHeader.biPlanes=1;
+        bmpInfo.bmiHeader.biBitCount=32;
+        bmpInfo.bmiHeader.biCompression=BI_RGB;
+
+        //DIBSection作成
+        auto hdc = GetDC(hwnd);
+        hBitmap = CreateDIBSection(hdc, &bmpInfo, DIB_RGB_COLORS, (void**)&lpPixel, NULL, 0);
+        hMemDC = CreateCompatibleDC(hdc);
+        SelectObject(hMemDC,hBitmap);
+        ReleaseDC(hwnd,hdc);
+    }
+
+    void release() {
+        DeleteDC(hMemDC);
+        DeleteObject(hBitmap);
+    }
+
+    void onPaint(HWND hwnd)
+    {
+        RECT rect;
+        GetClientRect(hwnd, &rect);
+
+        PAINTSTRUCT ps;
+        HDC hdc = BeginPaint(hwnd, &ps);
+        SetStretchBltMode(hdc, COLORONCOLOR);
+        //表画面へ転送
+        StretchDIBits(hdc,
+            // コピー先
+            0,0, rect.right,rect.bottom,
+            // コピー元
+            0,0, WIDTH, HEIGHT,lpPixel,&bmpInfo,DIB_RGB_COLORS,SRCCOPY);
+        EndPaint(hwnd, &ps);
+    }
+
+    void update()
+    {
+        InvalidateRect(hwnd, 0, false);
+        UpdateWindow(hwnd);
+    }
+};
+
 namespace {
 
 cat::core::decoder::CassetteVisionAudioDecoder*
@@ -24,146 +86,20 @@ getSound(const std::int64_t clockCounter)
     return decoder;
 }
 
-
-class Console {
-    int renderIndex;
-    HANDLE srceenHandle[2];
-    CHAR_INFO buffer[128*128];
-public:
-    void init() {
-        renderIndex = 0;
-        srceenHandle[0] = CreateConsoleScreenBuffer(GENERIC_READ | GENERIC_WRITE, 0, NULL, CONSOLE_TEXTMODE_BUFFER, NULL);
-        srceenHandle[1] = CreateConsoleScreenBuffer(GENERIC_READ | GENERIC_WRITE, 0, NULL, CONSOLE_TEXTMODE_BUFFER, NULL);
-
-        CONSOLE_CURSOR_INFO consoleCursorInfo;
-        consoleCursorInfo.dwSize = 1;
-        consoleCursorInfo.bVisible = FALSE;
-        for(auto sh : srceenHandle) { SetConsoleCursorInfo(sh, &consoleCursorInfo); }
-
-        //バッファーを初期化
-        for(auto& buf : buffer) {
-            buf.Char.AsciiChar = 0x20;
-            buf.Attributes = 0x00;
-        }
-    }
-
-    HANDLE getRenderTarget()
-    {
-        return srceenHandle[renderIndex];
-    }
-
-    CHAR_INFO* getScreenBuffer()
-    {
-        return buffer;
-    }
-
-    void swapRenderTarget() {
-        renderIndex = renderIndex ^ 1;
-    }
-
-    void cls() {
-        auto target = getRenderTarget();
-    }
-
-    void Write() {
-        auto target = getRenderTarget();
-        COORD bufferCoord = { 0, 0 };
-        COORD bufferSize = { 128, 128 };
-        SMALL_RECT rect = { 0, 0, 80, 60 };
-        ::WriteConsoleOutputA(target, buffer, bufferSize, bufferCoord, &rect);
-    }
-
-    void present()
-    {
-        auto target = getRenderTarget();
-        SetConsoleActiveScreenBuffer(target);
-        swapRenderTarget();
-    }
-};
-
 // 時間調整用
 LARGE_INTEGER mTimeStart;
-
-Console*
-getConsole()
-{
-    static std::unique_ptr<Console> console;
-    if(!console) {
-        console = std::make_unique<Console>();
-        console->init();
-
-        // 開始時間の初期化
-        QueryPerformanceCounter(&mTimeStart);
-    }
-    return console.get();
-}
 
 } // namespace
 
 void
 WinPD777::present()
 {
-#if false
-    std::printf("\x1b[100A"); // 画面クリア
-    for(int y = 0; y < 60; y++) {
-        for(int x = 0; x < 80; x++) {
-            // 色設定
-            switch(frameBuffer[x + (y*frameBufferWidth)]) {
-                case 0x00: std::printf("\x1b[48;2;0;0;0m"); break;
-                case 0x01: std::printf("\x1b[48;2;100;196;255m"); break;     // 青のインベーダーの色、シェルターの色
-                case 0x02: std::printf("\x1b[48;2;170;223;8m"); break;  // 緑のインベーダーの色
-                case 0x03: std::printf("\x1b[48;2;0;255;255m"); break;
-                case 0x04: std::printf("\x1b[48;2;255;0;0m"); break;
-                case 0x05: std::printf("\x1b[48;2;255;0;255m"); break;
-                case 0x06: std::printf("\x1b[48;2;255;183;44m"); break;  // 黄のインベーダーの色
-                case 0x07: std::printf("\x1b[48;2;255;255;255m"); break;
-
-                case 0x08: std::printf("\x1b[48;2;0;0;0m"); break;
-                case 0x09: std::printf("\x1b[48;2;126;192;255m"); break; // 残機の色
-                case 0x0A: std::printf("\x1b[48;2;141;229;59m"); break;  // ゲームNo.(レベル)の色
-                case 0x0B: std::printf("\x1b[48;2;74;232;139m"); break;  // 得点の色
-                case 0x0C: std::printf("\x1b[48;2;255;0;0m"); break;
-                case 0x0D: std::printf("\x1b[48;2;255;0;255m"); break;
-                case 0x0E: std::printf("\x1b[48;2;255;255;0m"); break;
-                case 0x0F: std::printf("\x1b[48;2;255;255;255m"); break;
-            }
-            // 1マス描画
-            std::printf(" ");
-        }
-	    std::printf("\x1b[38;2;255;255;255m"); std::printf("\x1b[48;2;0;0;0m"); // 黒地に白戻しておく
-        std::printf("\x1b[K\n"); // 行末までクリア
-    }
-#else
-    auto console = getConsole();
-    console->cls();
-    CHAR_INFO* screenBuffer = console->getScreenBuffer();
-    for(int y = 0; y < 60; y++) {
-        for(int x = 0; x < 80; x++) {
-            auto& ch = screenBuffer[x + (y*frameBufferWidth)];
-            // 色設定
-            switch(frameBuffer[x + (y*frameBufferWidth)]) {
-                case 0x00: ch.Attributes = 0x00; break; // std::printf("\x1b[48;2;0;0;0m"); break;
-                case 0x01: ch.Attributes = 0x10; break; // std::printf("\x1b[48;2;100;196;255m"); break;     // 青のインベーダーの色、シェルターの色
-                case 0x02: ch.Attributes = 0x20; break; // std::printf("\x1b[48;2;170;223;8m"); break;  // 緑のインベーダーの色
-                case 0x03: ch.Attributes = 0x30; break; // std::printf("\x1b[48;2;0;255;255m"); break;
-                case 0x04: ch.Attributes = 0x40; break; // std::printf("\x1b[48;2;255;0;0m"); break;
-                case 0x05: ch.Attributes = 0x50; break; // std::printf("\x1b[48;2;255;0;255m"); break;
-                case 0x06: ch.Attributes = 0x60; break; // std::printf("\x1b[48;2;255;183;44m"); break;  // 黄のインベーダーの色
-                case 0x07: ch.Attributes = 0x70; break; // std::printf("\x1b[48;2;255;255;255m"); break;
-
-                case 0x08: ch.Attributes = 0x00; break; // std::printf("\x1b[48;2;0;0;0m"); break;
-                case 0x09: ch.Attributes = 0x90; break; // std::printf("\x1b[48;2;126;192;255m"); break; // 残機の色
-                case 0x0A: ch.Attributes = 0xA0; break; // std::printf("\x1b[48;2;141;229;59m"); break;  // ゲームNo.(レベル)の色
-                case 0x0B: ch.Attributes = 0xB0; break; // std::printf("\x1b[48;2;74;232;139m"); break;  // 得点の色
-                case 0x0C: ch.Attributes = 0xC0; break; // std::printf("\x1b[48;2;255;0;0m"); break;
-                case 0x0D: ch.Attributes = 0xD0; break; // std::printf("\x1b[48;2;255;0;255m"); break;
-                case 0x0E: ch.Attributes = 0xE0; break; // std::printf("\x1b[48;2;255;255;0m"); break;
-                case 0x0F: ch.Attributes = 0xF0; break; // std::printf("\x1b[48;2;255;255;255m"); break;
-            }
-            ch.Char.AsciiChar = ' ';
+    for(int y = 0; y < WinImage::HEIGHT; y++) {
+        for(int x = 0; x < WinImage::WIDTH; x++) {
+            image->lpPixel[x + y * WinImage::WIDTH] = frameBuffer[x + (y*frameBufferWidth)];
         }
     }
-    console->Write();
+    image->update();
 
     // 時間調整
     {
@@ -183,9 +119,6 @@ WinPD777::present()
         }
         QueryPerformanceCounter(&mTimeStart);
     }
-
-    console->present();
-#endif
 }
 
 void
@@ -296,4 +229,20 @@ WinPD777::setFRS(const s64 clockCounter, const u8 value)
     if(auto snd = getSound(clockCounter); snd) {
         snd->setFRS(clockCounter, value);
     }
+}
+
+WinPD777::WinPD777(HWND hwnd)
+    : PD777()
+    , image(new WinImage())
+{
+    image->make(hwnd);
+
+    // 開始時間の初期化
+    QueryPerformanceCounter(&mTimeStart);
+}
+
+void
+WinPD777::onPaint(HWND hwnd)
+{
+    image->onPaint(hwnd);
 }
