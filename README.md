@@ -23,3 +23,16 @@
 ![Battle Vader](/wiki/image/Galaxian000.png)
 ![Battle Vader](/wiki/image/Galaxian001.png)
 ![Battle Vader](/wiki/image/Galaxian002.png)
+
+# 更新履歴
+グラフィック
+* スプライトの優先順位の調整
+* スプライトの色の調整
+* 表示範囲の調整
+
+サウンド
+* サイン波を矩形波に変更
+
+入力
+* PUSH1、PUSH2の２つのボタンを認識するように修正  
+　@todo ボタン４個つかっているのは不明
