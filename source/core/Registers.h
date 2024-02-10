@@ -96,6 +96,7 @@ class Registers {
     u8 mode;
 public:
     void setDISP(bool D) { DISP = D; }
+    bool getDISP() const { return DISP; }
     void setGPE(bool G) { GPE = G; }
     void setKIE(bool K) { KIE = K; }
     bool getKIE() const{ return KIE; }

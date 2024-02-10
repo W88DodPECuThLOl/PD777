@@ -58,15 +58,17 @@ public:
 				auto r = 0.0;
 				auto l = 0.0;
 				if(source[0].freq > 1) {
-					l = std::sin(currentL);
+					// l = std::sin(currentL);
+					l = currentL > 3.141592653 ? -1 : 1;
 					currentL = std::fmod(currentL + stepL, 2.0 * 3.141592653);
 				}
 				if(source[1].freq > 1) {
-					r = std::sin(currentR);
+					//r = std::sin(currentR);
+					r = currentR > 3.141592653 ? -1 : 1;
 					currentR = std::fmod(currentR + stepR, 2.0 * 3.141592653);
 				}
 
-				*buf++ = (r + l) * 0.5 * 32767.0 * 0.2;
+				*buf++ = (r + l) * 0.5 * 32767.0 * 0.03;
 				size -= 2;
 			}
 		}

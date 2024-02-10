@@ -9,6 +9,124 @@
 
 #define CMP_HA1_7bit (1)
 
+namespace {
+
+// スプライトの色々な値を取得する関数
+inline const u8 getSpritePrio(const u8* ram, const s32 index) { return ram[index * 4 + 0] & 1; }
+inline const u8 getSpriteY(const u8* ram, const s32 index) { return ram[index * 4 + 0] >> 1; }
+inline const u8 getSpriteX(const u8* ram, const s32 index) { return ram[index * 4 + 1]; }
+inline const u8 getSpritePattern(const u8* ram, const s32 index) { return ram[index * 4 + 2]; }
+inline const u8 getSpritePatternRomAddressOffset(const u8* ram, const s32 index) {
+    const u8 data3 = ram[index * 4 + 3];
+    const u8 y     = (data3 >> 4) & 0x7;
+    const u8 ySUB  = data3 & 1;
+    return (y - ySUB) & 0x7;
+}
+
+#define MakeRGB(r,g,b) ((b) | ((g) << 8) | ((r) << 16))
+
+/**
+ * @brief 背景色をRGB値へ変換するときのテーブル
+ * @todo  ちゃんとした値を設定すること
+ */
+static const u32 tblBGtoRGB[64] = {
+                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
+                                // 0         : 0 : 0        :000
+    MakeRGB(0x00, 0xAE, 0xEF),  // ブルーシアン
+
+                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
+                                // 0         : 0 : 0        :001
+    MakeRGB(0x00, 0x00, 0xFF),  // 青
+
+                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
+                                // 0         : 0 : 0        :010
+    MakeRGB(0x00, 0xFF, 0x00),  // 緑
+
+                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
+                                // 0         : 0 : 0        :011
+    MakeRGB(0xE4, 0x00, 0x7F),  // マゼンタ
+
+                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
+                                // 0         : 0 : 0        :100
+    MakeRGB(208, 46, 61),       // 赤
+
+                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
+                                // 0         : 0 : 0        :101
+    MakeRGB(0x00, 0xA0, 0xE9),  // シアン
+
+                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
+                                // 0         : 0 : 0        :110
+    MakeRGB(0xFF, 0xFF, 0x00),  // 黄
+
+                                // BRIGHTNESS:HUE:BLACK/PRIO:BGR
+                                // 0         : 0 : 0        :111
+    MakeRGB(0xF5, 0x82, 0x20),  // オレンジ
+//--------------------------------------------------------------------
+//--------------------------------------------------------------------
+                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
+                                // 0         : 0 : 1        :000
+    MakeRGB(0x00, 0x00, 0x00),  // 黒
+
+                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
+                                // 0         : 0 : 1        :001
+    MakeRGB(0x00, 0x00, 0xFF),  // 青
+
+                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
+                                // 0         : 0 : 1        :010
+    MakeRGB(0x00, 0xFF, 0x00),  // 緑
+
+                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
+                                // 0         : 0 : 1        :011
+    MakeRGB(0xE4, 0x00, 0x7F),  // マゼンタ
+
+                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
+                                // 0         : 0 : 1        :100
+    MakeRGB(0xFF, 0x00, 0x00),  // 赤
+
+                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
+                                // 0         : 0 : 1        :101
+    MakeRGB(0x00, 0xA0, 0xE9),  // シアン
+
+                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
+                                // 0         : 0 : 1        :110
+    MakeRGB(0xFF, 0xFF, 0x00),  // 黄
+
+                                // BRIGHTNESS:HUE:BLACK/PRIO:BGR
+                                // 0         : 0 : 1        :111
+    MakeRGB(0xFF, 0xFF, 0xFF),  // 白
+};
+
+/**
+ * @brief スプライトの色変換テーブル
+ * @todo 色の調整
+ */
+static const u32 tblSpriteToRGB[16] = {
+    // PRIO:RGB
+    //    0:xxx
+    MakeRGB(0x00, 0x00, 0x00),  // 0:000
+    MakeRGB(111, 190, 255),     // 0:001
+    MakeRGB(176, 223,  11),     // 0:010
+    MakeRGB(98, 206, 170),      // 0:011
+    MakeRGB(255, 129, 196),     // 0:100
+    MakeRGB(208, 136, 203),     // 0:101
+    MakeRGB(255, 161, 31),      // 0:110
+    MakeRGB(0xFF, 0xFF, 0xFF),  // 0:111
+    // PRIO:RGB
+    //    1:xxx
+    MakeRGB(0x00, 0x00, 0x00),  // 1:000
+    MakeRGB(132, 195, 204),     // 1:001
+    MakeRGB(176, 223, 11),      // 1:010
+    MakeRGB(164, 234, 150),     // 1:011
+    MakeRGB(255, 135, 190),     // 1:100
+    MakeRGB(198, 177, 255),     // 1:101
+    MakeRGB(255, 160, 34),      // 1:110
+    MakeRGB(0xD0, 0xD0, 0xD0),  // 1:111
+};
+
+#undef MakeRGB
+
+} // namespace
+
 void
 PD777::execNOP(const u16 pc, const u16 code)
 {
@@ -1994,109 +2112,17 @@ PD777::setMode(const u8 mode)
     regs.setMode(mode);
 }
 
-#define MakeRGB(r,g,b) ((b) | ((g) << 8) | ((r) << 16))
-
-/**
- * @brief 背景色をRGB値へ変換するときのテーブル
- * @todo  ちゃんとした値を設定すること
- */
-static const u32 tblBGtoRGB[64] = {
-                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
-                                // 0         : 0 : 0        :000
-    MakeRGB(0x00, 0xAE, 0xEF),  // ブルーシアン
-
-                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
-                                // 0         : 0 : 0        :001
-    MakeRGB(0x00, 0x00, 0xFF),  // 青
-
-                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
-                                // 0         : 0 : 0        :010
-    MakeRGB(0x00, 0xFF, 0x00),  // 緑
-
-                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
-                                // 0         : 0 : 0        :011
-    MakeRGB(0xE4, 0x00, 0x7F),  // マゼンタ
-
-                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
-                                // 0         : 0 : 0        :100
-    MakeRGB(208, 46, 61),       // 赤
-
-                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
-                                // 0         : 0 : 0        :101
-    MakeRGB(0x00, 0xA0, 0xE9),  // シアン
-
-                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
-                                // 0         : 0 : 0        :110
-    MakeRGB(0xFF, 0xFF, 0x00),  // 黄
-
-                                // BRIGHTNESS:HUE:BLACK/PRIO:BGR
-                                // 0         : 0 : 0        :111
-    MakeRGB(0xF5, 0x82, 0x20),  // オレンジ
-//--------------------------------------------------------------------
-//--------------------------------------------------------------------
-                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
-                                // 0         : 0 : 1        :000
-    MakeRGB(0x00, 0x00, 0x00),  // 黒
-
-                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
-                                // 0         : 0 : 1        :001
-    MakeRGB(0x00, 0x00, 0xFF),  // 青
-
-                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
-                                // 0         : 0 : 1        :010
-    MakeRGB(0x00, 0xFF, 0x00),  // 緑
-
-                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
-                                // 0         : 0 : 1        :011
-    MakeRGB(0xE4, 0x00, 0x7F),  // マゼンタ
-
-                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
-                                // 0         : 0 : 1        :100
-    MakeRGB(0xFF, 0x00, 0x00),  // 赤
-
-                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
-                                // 0         : 0 : 1        :101
-    MakeRGB(0x00, 0xA0, 0xE9),  // シアン
-
-                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
-                                // 0         : 0 : 1        :110
-    MakeRGB(0xFF, 0xFF, 0x00),  // 黄
-
-                                // BRIGHTNESS:HUE:BLACK/PRIO:BGR
-                                // 0         : 0 : 1        :111
-    MakeRGB(0xFF, 0xFF, 0xFF),  // 白
-};
-
-static const u32 tblSpriteToRGB[16] = {
-    // PRIO:RGB
-    MakeRGB(0x00, 0x00, 0x00),
-    MakeRGB(95,    159,  169),  // 青のインベーダーの色、シェルターの色
-    MakeRGB(170,   223,    8),  // 緑のインベーダーの色
-    MakeRGB(98, 206, 170),  // 
-    MakeRGB(208, 131, 164),     // 赤のインベーダーの色
-    MakeRGB(208, 136, 203),     // 上から２番目のインベーダーの色
-    MakeRGB(209, 185, 0),       // 黄のインベーダーの色
-    MakeRGB(0xFF, 0xFF, 0xFF),
-
-    MakeRGB(0x00, 0x00, 0x00),
-    MakeRGB(132, 195, 204),  // 左上の数値
-    MakeRGB(0x00, 0xFF, 0x00),
-    MakeRGB(0x00, 0xFF, 0xFF),
-    MakeRGB(0xFF, 0x00, 0x00),
-    MakeRGB(0xFF, 0x00, 0xFF),
-    MakeRGB(0xFF, 0xFF, 0x00),
-    MakeRGB(0xFF, 0xFF, 0xFF),
-};
-
 void
 PD777::pset(s32 x, s32 y, u32 rgb, bool bent1, bool bent2)
 {
-    x *= 4;
-    y *= 4;
+    if(y > 57) { return; }
+
+    x *= dotWidth;
+    y *= dotHeight;
 
     if(bent1) {
         // 斜め
-        for(s32 yy = 0; yy < 4; ++yy) {
+        for(s32 yy = 0; yy < dotHeight; ++yy) {
             //for(s32 xx = 0; xx < 4; ++xx) { // @todo 4dotだとUFOに隙間ができてしまう
             for(s32 xx = 0; xx < 8; ++xx) {
                 frameBuffer[x + xx + yy + (y + yy) * frameBufferWidth] = rgb;
@@ -2104,17 +2130,39 @@ PD777::pset(s32 x, s32 y, u32 rgb, bool bent1, bool bent2)
         }
     } else if(bent2) {
         // 斜め
-        for(s32 yy = 0; yy < 4; ++yy) {
+        for(s32 yy = 0; yy < dotHeight; ++yy) {
             //for(s32 xx = 0; xx < 4; ++xx) { // @todo 4dotだとUFOに隙間ができてしまう
             for(s32 xx = 0; xx < 8; ++xx) {
                 frameBuffer[x + xx + 4 - yy + (y + yy) * frameBufferWidth] = rgb;
             }
         }
     } else {
-        for(s32 yy = 0; yy < 4; ++yy) {
-            for(s32 xx = 0; xx < 4; ++xx) {
+        for(s32 yy = 0; yy < dotHeight; ++yy) {
+            for(s32 xx = 0; xx < dotWidth; ++xx) {
                 frameBuffer[x + xx + (y + yy) * frameBufferWidth] = rgb;
             }
+        }
+    }
+}
+
+
+void
+PD777::getCharacterAttribute(const u8 characterNo, bool& repeatY, bool& repeatX, bool& bent1, bool& bent2)
+{
+    repeatY = false;
+    repeatX = false;
+    bent1   = false;
+    bent2   = false;
+    for(auto i = 0; i < 0x100; i += 2) {
+        if(characterAttribute[i] >= 0x80) {
+            return;
+        }
+        if(characterAttribute[i] == characterNo) {
+            repeatX = (characterAttribute[i + 1] & 0x1) != 0;
+            repeatY = (characterAttribute[i + 1] & 0x2) != 0;
+            bent1   = (characterAttribute[i + 1] & 0x4) != 0;
+            bent2   = (characterAttribute[i + 1] & 0x8) != 0;
+            return;
         }
     }
 }
@@ -2128,73 +2176,98 @@ PD777::makePresentImage()
     auto bgBlackPrio    = modeRegister & 0x08; // BLACK/PRIO
     auto bgRGB          = modeRegister & 0x07; // RGB
 
+    // -------------
     // 背景色
-    const auto bgColor = tblBGtoRGB[bgRGB | bgBlackPrio /* | modeHUE | modeBrightness */]; // @todo
+    // -------------
+    const auto bgColor = tblBGtoRGB[bgRGB | bgBlackPrio /* | modeHUE | modeBrightness */]; // @todo パラメータの反映、色の調整
     for(auto& m : frameBuffer) { m = bgColor; }
+
+    // 画面非表示
+    if(!regs.getDISP()) {
+        // @todo ちらつきの頻度が多く、目に悪いので省略
+        //return;
+    }
+
+    // -------------
     // スプライト
-    for(s32 index = 0; index <= 0x18; ++index) {
-        const auto data0 = ram[index * 4 + 0];
-        const auto data1 = ram[index * 4 + 1];
-        const auto data2 = ram[index * 4 + 2];
+    // -------------
+    // ソート
+    // 
+    // メモ）優先順位
+    // 低い
+    //   X,YリピートありでPRIO:0
+    //   X,YリピートなしでPRIO:0
+    //                    PRIO:1
+    // 高い
+    s32 order[0x19] = {};
+    s32 idx = 0;
+    // X,YリピートありでPRIO:0
+    for(auto index = 0; index <= 0x18; ++index) {
+        if(!getSpritePrio(ram, index)) {
+            bool repeatY, repeatX, bent1, bent2;
+            getCharacterAttribute(getSpritePattern(ram, index), repeatY, repeatX, bent1, bent2);
+            if(repeatY || repeatX) { order[idx++] = index; }
+        }
+    }
+    // X,YリピートなしでPRIO:0
+    for(auto index = 0; index <= 0x18; ++index) {
+        if(!getSpritePrio(ram, index)) {
+            bool repeatY, repeatX, bent1, bent2;
+            getCharacterAttribute(getSpritePattern(ram, index), repeatY, repeatX, bent1, bent2);
+            if(!(repeatY || repeatX)) { order[idx++] = index; }
+        }
+    }
+    // PRIO:1
+    for(auto index = 0; index <= 0x18; ++index) {
+        if(getSpritePrio(ram, index)) { order[idx++] = index; }
+    }
+    // 優先をつけたスプライトを描画
+    for(const auto index : order) {
+        auto PRIO = getSpritePrio(ram, index);      // 表示優先順位？（色にも影響する？）
+        u32 Y     = getSpriteY(ram, index);         // Y座標
+        u32 SX    = getSpriteX(ram, index);         // X座標
+        u16 P     = getSpritePattern(ram, index);   // パターン
+        const auto patternRomAddressOffset = getSpritePatternRomAddressOffset(ram, index); // パターンROM読み出し時のオフセット
+
+        // @todo 色
         const auto data3 = ram[index * 4 + 3];
-
-        auto PRIO = data0 & 1;
-        u32 Y     = data0 >> 1;
-        u32 SX    = data1;
-        u16 P     = data2;
-        auto y    = data3 >> 4;
-        u32 rgb  = ((data3 >> 1) & 7) | (PRIO << 3); // | forgroundColor; // prio rgb
-        auto ySUB = data3 & 1;
-
+        u32 rgb   = ((data3 >> 1) & 7) | (PRIO << 3); // | forgroundColor; // prio rgb
         rgb = tblSpriteToRGB[rgb]; // PRIO:RGB
 
-        bool repeatY = false;
-        bool repeatX = false;
-        bool shear1  = false;
-        bool shear2  = false;
-        for(u16 i = 0; i < 0x100; i += 2) {
-            if(characterAttribute[i] >= 0x80) {
-                break;
-            }
-            if(characterAttribute[i] == P) {
-                repeatX = (characterAttribute[i + 1] & 0x1) != 0;
-                repeatY = (characterAttribute[i + 1] & 0x2) != 0;
-                shear1  = (characterAttribute[i + 1] & 0x4) != 0;
-                shear2  = (characterAttribute[i + 1] & 0x8) != 0;
-                break;
-            }
-        }
+        // リピートやベントのパターンの属性の取得
+        bool repeatY, repeatX, bent1, bent2;
+        getCharacterAttribute(P, repeatY, repeatX, bent1, bent2);
 
         do {
             auto X = SX;
             do {
                 if(P < 0x70) {
-                    auto base = (P - (P / 8)) * 7;
-                    for(int line = 0; line < 7; ++line) {
-                        const auto pattern = patternRom[base + line];
-                        const auto yy = (Y + line) * frameBufferWidth;
-                        if(pattern & 0x40) pset(X + 0, Y + line, rgb, shear1, shear2);
-                        if(pattern & 0x20) pset(X + 1, Y + line, rgb, shear1, shear2);
-                        if(pattern & 0x10) pset(X + 2, Y + line, rgb, shear1, shear2);
-                        if(pattern & 0x08) pset(X + 3, Y + line, rgb, shear1, shear2);
-                        if(pattern & 0x04) pset(X + 4, Y + line, rgb, shear1, shear2);
-                        if(pattern & 0x02) pset(X + 5, Y + line, rgb, shear1, shear2);
-                        if(pattern & 0x01) pset(X + 6, Y + line, rgb, shear1, shear2);
+                    // 7x7
+                    const auto base = (P - (P / 8)) * 7;
+                    for(auto line = 0; line < 7; ++line) {
+                        const auto pattern = patternRom[base + (line + patternRomAddressOffset) % 7];
+                        if(pattern & 0x40) pset(X + 0, Y + line, rgb, bent1, bent2);
+                        if(pattern & 0x20) pset(X + 1, Y + line, rgb, bent1, bent2);
+                        if(pattern & 0x10) pset(X + 2, Y + line, rgb, bent1, bent2);
+                        if(pattern & 0x08) pset(X + 3, Y + line, rgb, bent1, bent2);
+                        if(pattern & 0x04) pset(X + 4, Y + line, rgb, bent1, bent2);
+                        if(pattern & 0x02) pset(X + 5, Y + line, rgb, bent1, bent2);
+                        if(pattern & 0x01) pset(X + 6, Y + line, rgb, bent1, bent2);
                     }
                     X += 7;
                 } else {
-                    auto base = (P - 0x70 - ((P - 0x70) / 8)) * 7;
-                    for(int line = 0; line < 7; ++line) {
-                        const auto pattern = patternRom8[base + line];
-                        const auto yy = (Y + line) * frameBufferWidth;
-                        if(pattern & 0x80) pset(X + 0, Y + line, rgb, shear1, shear2);
-                        if(pattern & 0x40) pset(X + 1, Y + line, rgb, shear1, shear2);
-                        if(pattern & 0x20) pset(X + 2, Y + line, rgb, shear1, shear2);
-                        if(pattern & 0x10) pset(X + 3, Y + line, rgb, shear1, shear2);
-                        if(pattern & 0x08) pset(X + 4, Y + line, rgb, shear1, shear2);
-                        if(pattern & 0x04) pset(X + 5, Y + line, rgb, shear1, shear2);
-                        if(pattern & 0x02) pset(X + 6, Y + line, rgb, shear1, shear2);
-                        if(pattern & 0x01) pset(X + 7, Y + line, rgb, shear1, shear2);
+                    // 8x7
+                    const auto base = (P - 0x70 - ((P - 0x70) / 8)) * 7;
+                    for(auto line = 0; line < 7; ++line) {
+                        const auto pattern = patternRom8[base + (line + patternRomAddressOffset) % 7];
+                        if(pattern & 0x80) pset(X + 0, Y + line, rgb, bent1, bent2);
+                        if(pattern & 0x40) pset(X + 1, Y + line, rgb, bent1, bent2);
+                        if(pattern & 0x20) pset(X + 2, Y + line, rgb, bent1, bent2);
+                        if(pattern & 0x10) pset(X + 3, Y + line, rgb, bent1, bent2);
+                        if(pattern & 0x08) pset(X + 4, Y + line, rgb, bent1, bent2);
+                        if(pattern & 0x04) pset(X + 5, Y + line, rgb, bent1, bent2);
+                        if(pattern & 0x02) pset(X + 6, Y + line, rgb, bent1, bent2);
+                        if(pattern & 0x01) pset(X + 7, Y + line, rgb, bent1, bent2);
                     }
                     X += 8;
                 }

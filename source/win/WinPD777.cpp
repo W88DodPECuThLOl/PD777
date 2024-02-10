@@ -9,7 +9,7 @@
 
 class WinImage {
 public:
-    static constexpr s32 WIDTH = 80*4;
+    static constexpr s32 WIDTH = 75*4;
     static constexpr s32 HEIGHT = 60*4;
 
     BITMAPINFO bmpInfo;
@@ -94,12 +94,16 @@ LARGE_INTEGER mTimeStart;
 void
 WinPD777::present()
 {
-    for(int y = 0; y < WinImage::HEIGHT; y++) {
-        for(int x = 0; x < WinImage::WIDTH; x++) {
-            image->lpPixel[x + y * WinImage::WIDTH] = frameBuffer[x + (y*frameBufferWidth)];
+    // フレームバッファからGDIのビットマップにコピー
+    {
+        const s32 offsetX = 10*dotWidth;
+        for(int y = 0; y < WinImage::HEIGHT; y++) {
+            for(int x = 0; x < WinImage::WIDTH; x++) {
+                image->lpPixel[x + y * WinImage::WIDTH] = frameBuffer[x + offsetX + (y*frameBufferWidth)];
+            }
         }
+        image->update(); // 画面の更新要求
     }
-    image->update();
 
     // 時間調整
     {
@@ -112,10 +116,10 @@ WinPD777::present()
         auto mFrameTime = static_cast<double>(mTimeEnd.QuadPart - mTimeStart.QuadPart) / static_cast<double>(mTimeFreq.QuadPart);
         if (mFrameTime < FRAME_TIME)
         {
-	        DWORD sleepTime = static_cast<DWORD>((FRAME_TIME - mFrameTime) * 1000);
-	        timeBeginPeriod(1);
-	        Sleep(sleepTime);
-	        timeEndPeriod(1);
+            DWORD sleepTime = static_cast<DWORD>((FRAME_TIME - mFrameTime) * 1000);
+            timeBeginPeriod(1);
+            Sleep(sleepTime);
+            timeEndPeriod(1);
         }
         QueryPerformanceCounter(&mTimeStart);
     }
@@ -156,63 +160,66 @@ WinPD777::registerDump()
 bool
 WinPD777::isPD1()
 {
-	s32 gamePadIndex = 0;
-	cat::core::pad::GamePadState gamePadState;
-	cat::core::pad::getPadState(gamePadIndex, &gamePadState);
-	return (gamePadState.buttons & (cat::core::pad::ButtonMask::X | cat::core::pad::ButtonMask::DPAD_LEFT)) != 0;
+    s32 gamePadIndex = 0;
+    cat::core::pad::GamePadState gamePadState;
+    cat::core::pad::getPadState(gamePadIndex, &gamePadState);
+    return (gamePadState.buttons & (cat::core::pad::ButtonMask::X | cat::core::pad::ButtonMask::DPAD_LEFT)) != 0;
 }
 
 bool
 WinPD777::isPD2()
 {
-	s32 gamePadIndex = 0;
-	cat::core::pad::GamePadState gamePadState;
-	cat::core::pad::getPadState(gamePadIndex, &gamePadState);
-	return (gamePadState.buttons & (cat::core::pad::ButtonMask::B | cat::core::pad::ButtonMask::DPAD_RIGHT)) != 0;
+    s32 gamePadIndex = 0;
+    cat::core::pad::GamePadState gamePadState;
+    cat::core::pad::getPadState(gamePadIndex, &gamePadState);
+    return (gamePadState.buttons & (cat::core::pad::ButtonMask::B | cat::core::pad::ButtonMask::DPAD_RIGHT)) != 0;
 }
 
 bool
 WinPD777::isPD3()
 {
-	s32 gamePadIndex = 0;
-	cat::core::pad::GamePadState gamePadState;
-	cat::core::pad::getPadState(gamePadIndex, &gamePadState);
-	return (gamePadState.buttons & (cat::core::pad::ButtonMask::Y | cat::core::pad::ButtonMask::DPAD_UP)) != 0;
+    s32 gamePadIndex = 0;
+    cat::core::pad::GamePadState gamePadState;
+    cat::core::pad::getPadState(gamePadIndex, &gamePadState);
+    return (gamePadState.buttons & (cat::core::pad::ButtonMask::Y | cat::core::pad::ButtonMask::DPAD_UP)) != 0;
 }
 
 bool
 WinPD777::isPD4()
 {
-	s32 gamePadIndex = 0;
-	cat::core::pad::GamePadState gamePadState;
-	cat::core::pad::getPadState(gamePadIndex, &gamePadState);
-	return (gamePadState.buttons & (cat::core::pad::ButtonMask::A | cat::core::pad::ButtonMask::DPAD_DOWN)) != 0;
+    s32 gamePadIndex = 0;
+    cat::core::pad::GamePadState gamePadState;
+    cat::core::pad::getPadState(gamePadIndex, &gamePadState);
+    return (gamePadState.buttons & (cat::core::pad::ButtonMask::A | cat::core::pad::ButtonMask::DPAD_DOWN)) != 0;
 }
 
 u8
 WinPD777::readKIN()
 {
-	s32 gamePadIndex = 0;
-	cat::core::pad::GamePadState gamePadState;
-	cat::core::pad::getPadState(gamePadIndex, &gamePadState);
+    s32 gamePadIndex = 0;
+    cat::core::pad::GamePadState gamePadState;
+    cat::core::pad::getPadState(gamePadIndex, &gamePadState);
 
-	u8 value = (u8)KIN::None;
-	if(gamePadState.buttons & (cat::core::pad::ButtonMask::START | cat::core::pad::ButtonMask::RIGHT_THUMB)) {
-		value |= (u8)KIN::GameStartKey;
-	}
-	if(gamePadState.buttons & (cat::core::pad::ButtonMask::BACK | cat::core::pad::ButtonMask::LEFT_THUMB)) {
-		value |= (u8)KIN::GameSelectKey;
-	}
-	if((gamePadState.buttons & cat::core::pad::ButtonMask::DPAD_LEFT) || (gamePadState.analogs[0].x < -0.3f)) {
-		value |= (u8)KIN::LeverSwitchLeft;
-	}
-	if((gamePadState.buttons & cat::core::pad::ButtonMask::DPAD_RIGHT) || (gamePadState.analogs[0].x > 0.3f)) {
-		value |= (u8)KIN::LeverSwitchRight;
-	}
-	if(gamePadState.buttons & (cat::core::pad::ButtonMask::A | cat::core::pad::ButtonMask::B | cat::core::pad::ButtonMask::X | cat::core::pad::ButtonMask::Y)) {
-		value |= (u8)KIN::PushAll;
-	}
-	return value & 0x7F;
+    u8 value = (u8)KIN::None;
+    if(gamePadState.buttons & (cat::core::pad::ButtonMask::START | cat::core::pad::ButtonMask::RIGHT_THUMB)) {
+        value |= (u8)KIN::GameStartKey;
+    }
+    if(gamePadState.buttons & (cat::core::pad::ButtonMask::BACK | cat::core::pad::ButtonMask::LEFT_THUMB)) {
+        value |= (u8)KIN::GameSelectKey;
+    }
+    if((gamePadState.buttons & cat::core::pad::ButtonMask::DPAD_LEFT) || (gamePadState.analogs[0].x < -0.3f)) {
+        value |= (u8)KIN::LeverSwitchLeft;
+    }
+    if((gamePadState.buttons & cat::core::pad::ButtonMask::DPAD_RIGHT) || (gamePadState.analogs[0].x > 0.3f)) {
+        value |= (u8)KIN::LeverSwitchRight;
+    }
+    if(gamePadState.buttons & (cat::core::pad::ButtonMask::X | cat::core::pad::ButtonMask::Y)) {
+        value |= (u8)KIN::Push1;
+    }
+    if(gamePadState.buttons & (cat::core::pad::ButtonMask::A | cat::core::pad::ButtonMask::B)) {
+        value |= (u8)KIN::Push2;
+    }
+    return value & 0x7F;
 }
 
 void

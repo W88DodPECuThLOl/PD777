@@ -40,8 +40,25 @@ protected:
     Sound sound;
 
     // presentで使うフレームバッファ
-    static constexpr u32 frameBufferHeight = 128*4;
-    static constexpr u32 frameBufferWidth = 128*4;
+    /**
+     * @brief フレームバッファ上でのμPD777の１ドット高さ
+     */
+    static constexpr s32 dotHeight = 4;
+    /**
+     * @brief フレームバッファ上でのμPD777の１ドット幅
+     */
+    static constexpr s32 dotWidth = 4;
+    /**
+     * @brief フレームバッファの高さ
+     */
+    static constexpr u32 frameBufferHeight = 128*dotHeight;
+    /**
+     * @brief フレームバッファの横幅
+     */
+    static constexpr u32 frameBufferWidth = 128*dotWidth;
+    /**
+     * @brief presentで使うフレームバッファ
+     */
     u32 frameBuffer[frameBufferHeight*frameBufferWidth];
 #if defined(_WIN32)
     // for debug
@@ -52,6 +69,16 @@ private:
      * @brief   romをセットアップする
      */
     void setupRom();
+
+    /**
+     * キャラクタの属性を取得する
+     * @param[in]   characterNo キャラクタ
+     * @param[out]  repeatY     Y方向にリピートするかどうか
+     * @param[out]  repeatX     X方向にリピートするかどうか
+     * @param[out]  bent1       斜めのドットかどうか
+     * @param[out]  bent2       斜めのドットかどうか
+     */
+    void getCharacterAttribute(const u8 characterNo, bool& repeatY, bool& repeatX, bool& bent1, bool& bent2);
 
 protected:
     virtual void execNOP(const u16 pc, const u16 code) override;
@@ -260,34 +287,38 @@ protected:
     virtual bool isPD3() { return false; }
     virtual bool isPD4() { return false; }
 
-	/**
-	 * @brief KINの値
-	 */
-	enum class KIN : u8 {
-		None = 0x00,
+    /**
+     * @brief KINの値
+     */
+    enum class KIN : u8 {
+        None = 0x00,
 
-		/**
-		 * @brief	ゲームスタートキー
-		 */
-		GameStartKey     = 0x01,
-		/**
-		 * @brief	ゲームセレクトキー
-		 */
-		GameSelectKey    = 0x08,
-		/**
-		 * @brief	ゲーム操作キー（レバースイッチ）の左
-		 */
-		LeverSwitchLeft  = 0x02,
-		/**
-		 * @brief	ゲーム操作キー（レバースイッチ）の右
-		 */
-		LeverSwitchRight = 0x04,
-		/**
-		 * @brief	ゲーム操作キー（アクションキー）のPUSH 1からPUSH 4
-		 * @todo	どれを押しても同じっぽい？
-		 */
-		PushAll          = 0x70,
-	};
+        /**
+         * @brief	ゲームスタートキー
+         */
+        GameStartKey     = 0x01,
+        /**
+         * @brief	ゲームセレクトキー
+         */
+        GameSelectKey    = 0x08,
+        /**
+         * @brief	ゲーム操作キー（レバースイッチ）の左
+         */
+        LeverSwitchLeft  = 0x02,
+        /**
+         * @brief	ゲーム操作キー（レバースイッチ）の右
+         */
+        LeverSwitchRight = 0x04,
+
+        /**
+         * @brief	ゲーム操作キー（アクションキー）のPUSH 1
+         */
+        Push1            = 0x40,
+        /**
+         * @brief	ゲーム操作キー（アクションキー）のPUSH 2
+         */
+        Push2            = 0x20,
+    };
     /**
      * @brief キーの入力
      * @return 押下されているキーの論理和
