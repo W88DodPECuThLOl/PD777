@@ -1168,9 +1168,7 @@ PD777::execSubA2andA1toA1(const u16 pc, const u16 code)
     const auto A2 = regs.getA2();
     // @todo FIX ME!!!!
 #if PATCH_BattleVader_HIT
-    // Skip A2 < A1
     // A1 => A2
-    regs.setSkip(A2 < A1);
     regs.setA1(A2);
     regs.setL(N);
 /*
@@ -1227,6 +1225,69 @@ Label245: ; from 256
 258 599      K<$19> => L<0>,H<$19>              ; Store K[7:6] to L[2:1] and K[5:1] to H[5:1]
 230 380      A1 => M, N<0> => L                 ; Move A1[7:1] to M[H[5:1],L[2:1]][7:1], N => L[2:1]
 */
+
+/*
+Pakpak Monster。こっちじゃないと、自機と敵の当たり判定がおかしくなる。
+
+0B2の所で使用されているが「A2-A1 => A1」とする挙動がおかしい。
+また、スキップを行うと別の処理に遷移してしまうため、スキップ無し。
+
+;
+; A1 A2 敵0x30～0x31
+; A1 A2 敵0x38～0x39
+; 
+Entry0BC: ; caller 51F
+; [A1 A2)の範囲のパターンを持つスプライトの検索
+; 敵スプライトの検索
+0BC C74      JS $074                            ; Move K[10:1] to A[10:1], 0 to A11, Jump to A[11:1], Push next A[11:1] up to ROM address stack
+0F8 020      SRE                                ; Subroutine End, Pop down address stack
+
+; 見つかった
+;   H 敵スプライトのアドレス
+0F1 DA2      JS $1A2                            ; Move K[10:1] to A[10:1], 0 to A11, Jump to A[11:1], Push next A[11:1] up to ROM address stack
+    ; ($19:1 == 敵のX) $0C9
+    ; ($19:0 == 敵のY) $0DB
+    ; ($19:1 != 敵のX) && ($19:0 != 敵のY) return;
+0E3 3D0      A2 => H, N<0> => L                 ; Move A2[5:1] to H[5:1], N => L[2:1]
+    ; A1～A4は敵のスプライトの値
+0C7 058      MA => A                            ; Move M[H[5:1]][28:1] to (A4[7:1],A3[7:1],A2[7:1],A1[7:1])
+    ; X座標判定
+08E 5B9      K<$39> => L<1>,H<$19>              ; Store K[7:6] to L[2:1] and K[5:1] to H[5:1]
+09D 2B8 EQJ/ M=A2, N<0> => L                    ; Skip if (M[H[5:1],L[2:1]][7:1]-A2[7:1]) makes non zero, N => L[2:1]
+0BB 8C9      JP $0C9                            ; Move K[10:1] to A[10:1], Jump to A[11:1]
+    ; Y座標判定
+0F6 289 EQJ  M=A1, N<1> => L                    ; Skip if (M[H[5:1],L[2:1]][7:1]-A1[7:1]) makes zero, N => L[2:1]
+0ED 020      SRE                                ; Subroutine End, Pop down address stack
+
+    ; ($19:0 == 敵のY)のとき
+    ; $19:1 += 5; if($19:1 < 敵のX) return;
+0DB 125 CAJ  M+K<$05> => M, N<1> => L           ; M[H[5:1],L[2:1]][7:1]+K[7:1] => M[H[5:1],L[2:1]][7:1], Skip if carry, N => L[2:1]
+0B6 2BD BOJ/ M-A2, N<1> => L                    ; Skip if (M[H[5:1],L[2:1]][7:1]-A2[7:1]) makes non borrow, N => L[2:1]
+0EC 020      SRE                                ; Subroutine End, Pop down address stack
+
+    ; $19:1 -= 10;
+    ; 「A1 = A2; スキップはしない」
+    ; goto $094;
+0D9 1AA BOJ  M-K<$0A> => M, N<1> => L           ; M[H[5:1],L[2:1]][7:1]-K[7:1] => M[H[5:1],L[2:1]][7:1], Skip if borrow, N => L[2:1]
+0B2 34D BOJ  A2-A1 => A1, N<1> => L             ; Subtract A2[7:1] and A1[7:1], store to A1[7:1], Skip if borrow, N => L[2:1]
+0E4 894      JP $094                            ; Move K[10:1] to A[10:1], Jump to A[11:1]
+
+    ; ($19:1 == 敵のX)のとき
+Label0C9: ; from 0BB
+0C9 10A CAJ  M+K<$0A> => M, N<0> => L           ; M[H[5:1],L[2:1]][7:1]+K[7:1] => M[H[5:1],L[2:1]][7:1], Skip if carry, N => L[2:1]
+092 2AC BOJ/ M-A1, N<0> => L                    ; Skip if (M[H[5:1],L[2:1]][7:1]-A1[7:1]) makes non borrow, N => L[2:1]
+0A5 020      SRE                                ; Subroutine End, Pop down address stack
+
+
+0CA 194 BOJ  M-K<$14> => M, N<0> => L           ; M[H[5:1],L[2:1]][7:1]-K[7:1] => M[H[5:1],L[2:1]][7:1], Skip if borrow, N => L[2:1]
+Label094: ; from 0E4
+094 2AC BOJ/ M-A1, N<0> => L                    ; Skip if (M[H[5:1],L[2:1]][7:1]-A1[7:1]) makes non borrow, N => L[2:1]
+0A9 060      SRE+1                              ; Subroutine End, Pop down address stack, Skip
+
+
+0D2 020      SRE                                ; Subroutine End, Pop down address stack
+*/
+
 #else
     regs.setSkip(A2 < A1);
     regs.setA1(A2 - A1);
