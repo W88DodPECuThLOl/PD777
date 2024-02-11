@@ -2281,10 +2281,16 @@ PD777::makePresentImage()
     }
     // 優先をつけたスプライトを描画
     for(const auto index : order) {
+        u16 P     = getSpritePattern(ram, index);   // パターン
+
+        // パターンが0x?7と0x?Fのときは表示しない
+        if(((P & 0x0F) == 0x0F) || ((P & 0x0F) == 0x07)) [[unlikely]] {
+            continue;
+        }
+
         auto PRIO = getSpritePrio(ram, index);      // 表示優先順位？（色にも影響する？）
         u32 Y     = getSpriteY(ram, index);         // Y座標
         u32 SX    = getSpriteX(ram, index);         // X座標
-        u16 P     = getSpritePattern(ram, index);   // パターン
         const auto patternRomAddressOffset = getSpritePatternRomAddressOffset(ram, index); // パターンROM読み出し時のオフセット
 
         // @todo 色
