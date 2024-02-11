@@ -113,7 +113,7 @@ class Decoder {
         /* 348 */   { 0b111111111111, 0b001101001000, &Decoder::execMoveA2toFLS },
         /* 349 */   { 0b111111111111, 0b001101001001, &Decoder::execMoveA2toFRS },
         /* 34A */   { 0b111111111110, 0b001101001010, &Decoder::execMoveA2toMODE },
-        /* 34C */   { 0b111111111110, 0b001101001100, &Decoder::execSubA2andA1toA1 },
+        /* 34C */   { 0b111111111100, 0b001101001100, &Decoder::execSubA2andA1toA1 },
         /* 358 */   { 0b111111111100, 0b001101011000, &Decoder::execRightShiftA2 },
         //                              001110
         /* 388 */   { 0b111111111111, 0b001110001000, &Decoder::execMoveMtoFLS },
