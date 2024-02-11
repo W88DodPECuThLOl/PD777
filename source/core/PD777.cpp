@@ -185,13 +185,6 @@ PD777::exec4H_BLK(const u16 pc, const u16 code)
 //    print(pc, code, "4H BLK", u8"Skip if (4H Horizontal Blank) = 1", u8"J");
     if(crt.is4H_BLK()) {
         regs.setSkip();
-
-        // 4HBLKでクリアされるらしい
-        for(int i = 0; i <= 0x18; ++i) {
-            const auto address = (i << 2) | 3;
-            const auto value = readMem(address);
-            writeMem(address, value & ~1);
-        }
     }
 }
 
@@ -201,13 +194,6 @@ PD777::execVBLK(const u16 pc, const u16 code)
 //    print(pc, code, "VBLK", u8"Skip if (Vertical Blank) = 1, 0=>M[[18:00],[3]][1]", u8"J");
     if(crt.isVBLK()) {
         regs.setSkip();
-
-        // VBLKでクリアされるらしい
-        for(int i = 0; i <= 0x18; ++i) {
-            const auto address = (i << 2) | 3;
-            const auto value = readMem(address);
-            writeMem(address, value & ~1);
-        }
     }
 }
 
@@ -1668,9 +1654,9 @@ PD777::execSubMA2toM(const u16 pc, const u16 code)
 {
 //    snprintf(mnemonic, sizeof(mnemonic), "M-A2=>M, N<%d>=>L", N);
 //    print(pc, code, mnemonic, u8"Subtract M[H[5:1],L[2:1]][7:1] and A2[7:1], store to M[H[5:1],L[2:1]][7:1], N=>L[2:1], Skip if borrow", u8"BOJ");
-    const auto N = code & 0b00000'0000011;
-    const auto A2 = regs.getA2();
-    const auto M  = readMemAtHL();
+    const u8 N = code & 0b00000'0000011;
+    const u8 A2 = regs.getA2();
+    const u8 M  = readMemAtHL();
     regs.setSkip(M < A2);
     writeMemAtHL(M - A2);
     regs.setL(N);
@@ -1975,7 +1961,8 @@ PD777::execMoveKtoM(const u16 pc, const u16 code)
         const auto K = code & 0b00000'1111111;
         writeMemAtHL(K);
     } else if(regs.getKIE()) {
-        const auto KIN = readKIN();
+        const auto stb = regs.getSTB();
+        const auto KIN = readKIN(stb);
         writeMemAtHL(KIN);
     } else if(regs.getSME()) {
         const auto HCL = readHCL();
@@ -2122,6 +2109,7 @@ void PD777::execute()
         regs.nextPC();
     }
 
+    const auto hblk = crt.is4H_BLK();
     if(crt.step()) [[unlikely]] {
         // 新しいフレーム
 
@@ -2133,6 +2121,15 @@ void PD777::execute()
         // サウンドを定期的に更新しておく
         setFLS(sound.getClockCounter(), sound.getFLS());
         setFRS(sound.getClockCounter(), sound.getFRS());
+    }
+
+    if(!hblk && crt.is4H_BLK()) {
+        // 4HBLKでクリアされるらしい
+        for(int i = 0; i <= 0x18; ++i) {
+            const auto address = (i << 2) | 3;
+            const auto value = readMem(address);
+            writeMem(address, value & ~1);
+        }
     }
 
     // サウンド生成用のカウンタを加算

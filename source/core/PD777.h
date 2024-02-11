@@ -318,13 +318,27 @@ protected:
          * @brief	ゲーム操作キー（アクションキー）のPUSH 2
          */
         Push2            = 0x20,
+
+        /**
+         * @brief	ゲーム操作キー（アクションキー）のPUSH 3
+         * @note STBが0x0Dの時
+         */
+        Push3            = 0x2,
+
+        /**
+         * @brief	ゲーム操作キー（アクションキー）のPUSH 4
+         * @note STBが0x0Dの時
+         */
+        Push4            = 0x4,
     };
     /**
      * @brief キーの入力
-     * @return 押下されているキーの論理和
+     * 
+     * @param[in]   STB     不明
+     * @return  押下されているキーの論理和
      * @see     enum KIN
      */
-    virtual u8 readKIN() { return 0; }
+    virtual u8 readKIN(const u8 STB) { return 0; }
     /**
      * @brief 不明。水平カウンタの取得？
      * @return 不明

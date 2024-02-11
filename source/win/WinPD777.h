@@ -23,7 +23,7 @@ protected:
     virtual bool isPD2() override;
     virtual bool isPD3() override;
     virtual bool isPD4() override;
-    virtual u8 readKIN() override;
+    virtual u8 readKIN(const u8 STB) override;
 public:
     virtual void registerDump() override;
 };
