@@ -26,7 +26,7 @@ WindowProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
 
 void gameThreadEntry(uintptr_t param1, uintptr_t param2)
 {
-	SetThreadPriority( GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL );
+    SetThreadPriority( GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL );
 
     WinPD777* cpu = (WinPD777*)param1;
     while(!cpu->isFinish()) {
@@ -46,14 +46,14 @@ int main()
 
     std::unique_ptr<WinPD777> cpu = std::make_unique<WinPD777>(window->getWindowHandle());
     cpu->init();
-	SetWindowLongPtr(window->getWindowHandle(), GWLP_USERDATA, reinterpret_cast<LONG_PTR>(cpu.get()));
-	std::thread gameThread(gameThreadEntry, reinterpret_cast<uintptr_t>(cpu.get()), reinterpret_cast<uintptr_t>(window->getWindowHandle()));
+    SetWindowLongPtr(window->getWindowHandle(), GWLP_USERDATA, reinterpret_cast<LONG_PTR>(cpu.get()));
+    std::thread gameThread(gameThreadEntry, reinterpret_cast<uintptr_t>(cpu.get()), reinterpret_cast<uintptr_t>(window->getWindowHandle()));
 
-	MSG msg = {};
-	while (GetMessage(&msg, NULL, 0, 0) > 0) {
-		TranslateMessage(&msg);
-		DispatchMessage(&msg);
-	}
+    MSG msg = {};
+    while (GetMessage(&msg, NULL, 0, 0) > 0) {
+        TranslateMessage(&msg);
+        DispatchMessage(&msg);
+    }
 
     cpu->setFinish();
     gameThread.join();

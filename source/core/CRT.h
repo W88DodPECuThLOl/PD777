@@ -96,7 +96,8 @@ public:
      */
     bool is4H_BLK() const
     {
-        return (verticalCounter & 3) == 3;
+        return ((verticalCounter & 3) == 0)
+            && (horizontalCounter <= 15);
     }
 
     /**

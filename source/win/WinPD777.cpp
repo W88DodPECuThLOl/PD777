@@ -200,6 +200,13 @@ WinPD777::readKIN(const u8 STB)
     cat::core::pad::GamePadState gamePadState;
     cat::core::pad::getPadState(gamePadIndex, &gamePadState);
 
+    // 
+    // PUSH1 : X
+    // PUSH2 : B
+    // PUSH3 : Y
+    // PUSH4 : A
+    // 
+
     u8 value = (u8)KIN::None;
     if(STB == 0xD) {
         // ４方向使用するときの上下
@@ -208,6 +215,13 @@ WinPD777::readKIN(const u8 STB)
         }
         if((gamePadState.buttons & (cat::core::pad::ButtonMask::DPAD_DOWN | cat::core::pad::ButtonMask::A)) || (gamePadState.analogs[0].y < -0.3f)) {
             value |= (u8)KIN::Push4;
+        }
+
+        if((gamePadState.buttons & (cat::core::pad::ButtonMask::X | cat::core::pad::ButtonMask::Y))) {
+            value |= (u8)0x40; // PUSH1、PUSH3
+        }
+        if((gamePadState.buttons & (cat::core::pad::ButtonMask::A | cat::core::pad::ButtonMask::B))) {
+            value |= (u8)0x20; // PUSH2 PUSH4
         }
     } else /* if(STB == 0xE) */ {
         // PUSH1、PUSH2

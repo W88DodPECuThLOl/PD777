@@ -8,6 +8,8 @@
 #include "Stack.h"
 #include "Registers.h"
 #include "Sound.h"
+#include "GraphCommand.h"
+#include "GraphCommandBuffer.h"
 
 /**
  * @brief   μPD777
@@ -60,6 +62,10 @@ protected:
      * @brief presentで使うフレームバッファ
      */
     u32 frameBuffer[frameBufferHeight*frameBufferWidth];
+    /**
+     * @brief 描画コマンドバッファ
+     */
+    GraphCommandBuffer graphBuffer;
 #if defined(_WIN32)
     // for debug
     Disassembler disassembler;
@@ -71,7 +77,7 @@ private:
     void setupRom();
 
     /**
-     * キャラクタの属性を取得する
+     * @brief キャラクタの属性を取得する
      * @param[in]   characterNo キャラクタ
      * @param[out]  repeatY     Y方向にリピートするかどうか
      * @param[out]  repeatX     X方向にリピートするかどうか
@@ -79,6 +85,26 @@ private:
      * @param[out]  bent2       斜めのドットかどうか
      */
     void getCharacterAttribute(const u8 characterNo, bool& repeatY, bool& repeatX, bool& bent1, bool& bent2);
+    /**
+     * @brief 1ドット描画する
+     * @param[in]   x       X座標(0～90)
+     * @param[in]   y       Y座標(0～59)
+     * @param[in]   rgb     色
+     * @param[in]   bent1   ベント1
+     * @param[in]   bent2   ベント2
+     */
+    void pset(s32 x, s32 y, u32 rgb, bool bent1, bool bent2);
+
+    /**
+     * @brief スプライトをラスタライズする
+     * 
+     * スプライトをラスタライズして、描画コマンドバッファに描画コマンドを追加する。
+     * 
+     * @param[in,out]   commandBuffer   描画コマンドバッファ
+     * @param[in]       ram             メモリ
+     * @param[in]       verticalCounter 垂直カウンタ（ライスタライズする位置）
+     */
+    void spriteRasterize(GraphCommandBuffer* commandBuffer, const u8* ram, const u16 verticalCounter);
 
 protected:
     virtual void execNOP(const u16 pc, const u16 code) override;
@@ -253,8 +279,7 @@ protected:
     virtual void writeMem(const u16 address, const u8 value);
     virtual u8   readMem(const u16 address);
 
-    // grah
-    virtual void pset(s32 x, s32 y, u32 rgb, bool bent1, bool bent2);
+    // graph
     /**
      * @brief present()で使用するイメージを作成する
      * 128x128のframeBufferにイメージが作成される。

@@ -1,4 +1,5 @@
 ﻿#include "PD777.h"
+#include "PD777.h"
 
 #if defined(_WIN32)
 #include <string>
@@ -9,123 +10,7 @@
 
 #define CMP_HA1_7bit (1)
 
-namespace {
-
-// スプライトの色々な値を取得する関数
-inline const u8 getSpritePrio(const u8* ram, const s32 index) { return ram[index * 4 + 0] & 1; }
-inline const u8 getSpriteY(const u8* ram, const s32 index) { return ram[index * 4 + 0] >> 1; }
-inline const u8 getSpriteX(const u8* ram, const s32 index) { return ram[index * 4 + 1]; }
-inline const u8 getSpritePattern(const u8* ram, const s32 index) { return ram[index * 4 + 2]; }
-inline const u8 getSpritePatternRomAddressOffset(const u8* ram, const s32 index) {
-    const u8 data3 = ram[index * 4 + 3];
-    const u8 y     = (data3 >> 4) & 0x7;
-    const u8 ySUB  = data3 & 1;
-    return (y - ySUB) & 0x7;
-}
-
-#define MakeRGB(r,g,b) ((b) | ((g) << 8) | ((r) << 16))
-
-/**
- * @brief 背景色をRGB値へ変換するときのテーブル
- * @todo  ちゃんとした値を設定すること
- */
-static const u32 tblBGtoRGB[64] = {
-                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
-                                // 0         : 0 : 0        :000
-    MakeRGB(0x00, 0xAE, 0xEF),  // ブルーシアン
-
-                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
-                                // 0         : 0 : 0        :001
-    MakeRGB(0x00, 0x00, 0xFF),  // 青
-
-                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
-                                // 0         : 0 : 0        :010
-    MakeRGB(0x00, 0xFF, 0x00),  // 緑
-
-                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
-                                // 0         : 0 : 0        :011
-    MakeRGB(0xE4, 0x00, 0x7F),  // マゼンタ
-
-                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
-                                // 0         : 0 : 0        :100
-    MakeRGB(208, 46, 61),       // 赤
-
-                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
-                                // 0         : 0 : 0        :101
-    MakeRGB(0x00, 0xA0, 0xE9),  // シアン
-
-                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
-                                // 0         : 0 : 0        :110
-    MakeRGB(0xFF, 0xFF, 0x00),  // 黄
-
-                                // BRIGHTNESS:HUE:BLACK/PRIO:BGR
-                                // 0         : 0 : 0        :111
-    MakeRGB(0xF5, 0x82, 0x20),  // オレンジ
-//--------------------------------------------------------------------
-//--------------------------------------------------------------------
-                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
-                                // 0         : 0 : 1        :000
-    MakeRGB(0x00, 0x00, 0x00),  // 黒
-
-                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
-                                // 0         : 0 : 1        :001
-    MakeRGB(0x00, 0x00, 0xFF),  // 青
-
-                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
-                                // 0         : 0 : 1        :010
-    MakeRGB(0x00, 0xFF, 0x00),  // 緑
-
-                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
-                                // 0         : 0 : 1        :011
-    MakeRGB(0xE4, 0x00, 0x7F),  // マゼンタ
-
-                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
-                                // 0         : 0 : 1        :100
-    MakeRGB(0xFF, 0x00, 0x00),  // 赤
-
-                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
-                                // 0         : 0 : 1        :101
-    MakeRGB(0x00, 0xA0, 0xE9),  // シアン
-
-                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
-                                // 0         : 0 : 1        :110
-    MakeRGB(0xFF, 0xFF, 0x00),  // 黄
-
-                                // BRIGHTNESS:HUE:BLACK/PRIO:BGR
-                                // 0         : 0 : 1        :111
-    MakeRGB(0xFF, 0xFF, 0xFF),  // 白
-};
-
-/**
- * @brief スプライトの色変換テーブル
- * @todo 色の調整
- */
-static const u32 tblSpriteToRGB[16] = {
-    // PRIO:RGB
-    //    0:xxx
-    MakeRGB(0x00, 0x00, 0x00),  // 0:000
-    MakeRGB(111, 190, 255),     // 0:001
-    MakeRGB(176, 223,  11),     // 0:010
-    MakeRGB(98, 206, 170),      // 0:011
-    MakeRGB(255, 129, 196),     // 0:100
-    MakeRGB(208, 136, 203),     // 0:101
-    MakeRGB(255, 161, 31),      // 0:110
-    MakeRGB(0xFF, 0xFF, 0xFF),  // 0:111
-    // PRIO:RGB
-    //    1:xxx
-    MakeRGB(0x00, 0x00, 0x00),  // 1:000
-    MakeRGB(132, 195, 204),     // 1:001
-    MakeRGB(176, 223, 11),      // 1:010
-    MakeRGB(164, 234, 150),     // 1:011
-    MakeRGB(255, 135, 190),     // 1:100
-    MakeRGB(198, 177, 255),     // 1:101
-    MakeRGB(255, 160, 34),      // 1:110
-    MakeRGB(0xD0, 0xD0, 0xD0),  // 1:111
-};
-
-#undef MakeRGB
-
-} // namespace
+#define TEST_EQU_MA1_IGNORE_LSB (1)
 
 void
 PD777::execNOP(const u16 pc, const u16 code)
@@ -138,12 +23,20 @@ PD777::execGPL(const u16 pc, const u16 code)
 //    print(pc, code, "GPL", u8"Skip if (Gun Port Latch) = 1", u8"J");
 }
 
+
 void
 PD777::execMoveHtoNRM(const u16 pc, const u16 code)
 {
 //    print(pc, code, "H=>NRM", u8"Move H[5:1] to Line Buffer Register[5:1]");
     const auto H = regs.getH();
     regs.setLineBufferRegister(H);
+
+    const auto verticalCounter = crt.getVerticalCounter();
+    const auto spriteData0 = readMem((H << 2) | 0);
+    const auto spriteData1 = readMem((H << 2) | 1);
+    const auto spriteData2 = readMem((H << 2) | 2);
+    const auto spriteData3 = readMem((H << 2) | 3);
+    graphBuffer.addCommand(verticalCounter, spriteData0, spriteData1, spriteData2, spriteData3);
 }
 
 void
@@ -194,6 +87,12 @@ PD777::execVBLK(const u16 pc, const u16 code)
 //    print(pc, code, "VBLK", u8"Skip if (Vertical Blank) = 1, 0=>M[[18:00],[3]][1]", u8"J");
     if(crt.isVBLK()) {
         regs.setSkip();
+    }
+
+    for(int i = 0; i <= 0x18; ++i) {
+        const auto address = (i << 2) | 3;
+        const auto value = readMem(address);
+        writeMem(address, value & ~1);
     }
 }
 
@@ -701,6 +600,7 @@ PD777::execTestEquMA1_EQJ(const u16 pc, const u16 code)
     const u8 N = code & 0b00000'0000011;
     const u8 M  = readMemAtHL();
     const u8 A1 = regs.getA1();
+
     regs.setSkip(M == A1);
     regs.setL(N);
 }
@@ -714,8 +614,70 @@ PD777::execTestEquMA1_NOT_EQJ(const u16 pc, const u16 code)
     const u8 N = code & 0b00000'0000011;
     const u8 M  = readMemAtHL();
     const u8 A1 = regs.getA1();
+
+    // @todo FIX ME!!!!
+#if TEST_EQU_MA1_IGNORE_LSB
+    if(N == 0) {
+        // 最下位ビットを無視する
+        regs.setSkip((M & ~1) != (A1 & ~1));
+    } else {
+        regs.setSkip(M != A1);
+    }
+    regs.setL(N);
+/*
+    ソフトウェアで実現しているスプライトのYリピート機能で、
+    PRIO:1のスプライトが処理されない。
+    スプライトのY軸を判定するときに、PRIOが1だと漏れてしまう。
+    「EQJ/ M=A1, N<0> => L」命令で判定しているので、これをPRIO:1でも分岐するように
+    最下位ビットを無視して判定を行うようにした。
+
+    ; A1が0,2,4,...
+Label177: ; from 17D
+177 599      K<$19> => L<0>,H<$19>              ; Store K[7:6] to L[2:1] and K[5:1] to H[5:1]
+16F 102 CAJ  M+K<$02> => M, N<0> => L           ; M[H[5:1],L[2:1]][7:1]+K[7:1] => M[H[5:1],L[2:1]][7:1], Skip if carry, N => L[2:1]
+15F 000      NOP
+13E 38C      M => A1, N<0> => L                 ; Move M[H[5:1],L[2:1]][7:1] to A1[7:1], N => L[2:1]
+
+17C 598      K<$18> => L<0>,H<$18>              ; Store K[7:6] to L[2:1] and K[5:1] to H[5:1]
+Label179: ; from 14F
+    ; メモ）PRIOが1の物は対象にならないので、Yリピートが処理されない
+179 2A8 EQJ/ M=A1, N<0> => L                    ; Skip if (M[H[5:1],L[2:1]][7:1]-A1[7:1]) makes non zero, N => L[2:1]
+173 92E      JP $12E                            ; Move K[10:1] to A[10:1], Jump to A[11:1]
+
+Label167: ; from 174
+167 481 BOJ  H-K<$01> => H                      ; H[5:1]-K[5:1] => H[5:1], Skip if borrow
+14F 979      JP $179                            ; Move K[10:1] to A[10:1], Jump to A[11:1]
+
+Label11E: ; from 13D
+11E 049 J    4H BLK                             ; Skip if (4H Horizontal Blank) = 1
+13D 91E      JP $11E                            ; Move K[10:1] to A[10:1], Jump to A[11:1]
+17A 04A J    VBLK                               ; Skip if (Vertical Blank) = 1, 0 => M[[18:00],[3]][1]
+175 977      JP $177                            ; Move K[10:1] to A[10:1], Jump to A[11:1]
+16B 440      D<0> => D, G<0> => G, K<0> => K, S<0> => S, N<0> => A11    ; Set D to DISP, G to GPE, K to KIE, S to SME, N => A[11]
+157 020      SRE                                ; Subroutine End, Pop down address stack
+*/
+
+/*
+スプライトを検索するときにも、PRIO:1のスプライトが検索から漏れていたりした。
+修正すると、スプライトの検索が正常になり、様々な不具合が解消された。
+
+ギャラクシアン
+　・ドッキング出来るように
+アストロコマンド
+　・自機の後ろの噴射が付いてくるようになった
+　・ボスの弾が正常になった
+　・ボスの核が正常になり、ボスを倒せるようになった
+パクパクモンスター
+　・エサ、？の当たり判定が正しくなった
+モンスターマンション
+　・敵が動くようになった
+　・ジャンプで梯子を掴めるようになった
+*/
+
+#else
     regs.setSkip(M != A1);
     regs.setL(N);
+#endif
 }
 
 void
@@ -2113,6 +2075,16 @@ void PD777::execute()
     if(crt.step()) [[unlikely]] {
         // 新しいフレーム
 
+        // 4HBLKでクリアされるらしい
+        for(int i = 0; i <= 0x18; ++i) {
+            const auto address = (i << 2) | 3;
+            const auto value = readMem(address);
+            writeMem(address, value & ~1);
+        }
+
+        // ラスタライズ
+        spriteRasterize(&graphBuffer, ram, crt.getVerticalCounter());
+
         // イメージ作成
         makePresentImage();
         // 作成したイメージを画面に出力する
@@ -2121,14 +2093,17 @@ void PD777::execute()
         // サウンドを定期的に更新しておく
         setFLS(sound.getClockCounter(), sound.getFLS());
         setFRS(sound.getClockCounter(), sound.getFRS());
-    }
+    } else {
+        if(!hblk && crt.is4H_BLK()) {
+            // 4HBLKでクリアされるらしい
+            for(int i = 0; i <= 0x18; ++i) {
+                const auto address = (i << 2) | 3;
+                const auto value = readMem(address);
+                writeMem(address, value & ~1);
+            }
 
-    if(!hblk && crt.is4H_BLK()) {
-        // 4HBLKでクリアされるらしい
-        for(int i = 0; i <= 0x18; ++i) {
-            const auto address = (i << 2) | 3;
-            const auto value = readMem(address);
-            writeMem(address, value & ~1);
+            // ラスタライズ
+            spriteRasterize(&graphBuffer, ram, crt.getVerticalCounter());
         }
     }
 
@@ -2168,177 +2143,6 @@ PD777::setMode(const u8 mode)
 {
 //    printf("set Mode $%02X\n", mode);
     regs.setMode(mode);
-}
-
-void
-PD777::pset(s32 x, s32 y, u32 rgb, bool bent1, bool bent2)
-{
-    if(y > 57) { return; }
-
-    x *= dotWidth;
-    y *= dotHeight;
-
-    if(bent1) {
-        // 斜め
-        for(s32 yy = 0; yy < dotHeight; ++yy) {
-            //for(s32 xx = 0; xx < 4; ++xx) { // @todo 4dotだとUFOに隙間ができてしまう
-            for(s32 xx = 0; xx < 8; ++xx) {
-                frameBuffer[x + xx + yy + (y + yy) * frameBufferWidth] = rgb;
-            }
-        }
-    } else if(bent2) {
-        // 斜め
-        for(s32 yy = 0; yy < dotHeight; ++yy) {
-            //for(s32 xx = 0; xx < 4; ++xx) { // @todo 4dotだとUFOに隙間ができてしまう
-            for(s32 xx = 0; xx < 8; ++xx) {
-                frameBuffer[x + xx + 4 - yy + (y + yy) * frameBufferWidth] = rgb;
-            }
-        }
-    } else {
-        for(s32 yy = 0; yy < dotHeight; ++yy) {
-            for(s32 xx = 0; xx < dotWidth; ++xx) {
-                frameBuffer[x + xx + (y + yy) * frameBufferWidth] = rgb;
-            }
-        }
-    }
-}
-
-
-void
-PD777::getCharacterAttribute(const u8 characterNo, bool& repeatY, bool& repeatX, bool& bent1, bool& bent2)
-{
-    repeatY = false;
-    repeatX = false;
-    bent1   = false;
-    bent2   = false;
-    for(auto i = 0; i < 0x100; i += 2) {
-        if(characterAttribute[i] >= 0x80) {
-            return;
-        }
-        if(characterAttribute[i] == characterNo) {
-            repeatX = (characterAttribute[i + 1] & 0x1) != 0;
-            repeatY = (characterAttribute[i + 1] & 0x2) != 0;
-            bent1   = (characterAttribute[i + 1] & 0x4) != 0;
-            bent2   = (characterAttribute[i + 1] & 0x8) != 0;
-            return;
-        }
-    }
-}
-
-void
-PD777::makePresentImage()
-{
-    const auto modeRegister = regs.getMode();
-    auto modeBrightness = modeRegister & 0x20; // BRIGHTNESS
-    auto modeHUE        = modeRegister & 0x10; // HUE
-    auto bgBlackPrio    = modeRegister & 0x08; // BLACK/PRIO
-    auto bgRGB          = modeRegister & 0x07; // RGB
-
-    // -------------
-    // 背景色
-    // -------------
-    const auto bgColor = tblBGtoRGB[bgRGB | bgBlackPrio /* | modeHUE | modeBrightness */]; // @todo パラメータの反映、色の調整
-    for(auto& m : frameBuffer) { m = bgColor; }
-
-    // 画面非表示
-    if(!regs.getDISP()) {
-        // @todo ちらつきの頻度が多く、目に悪いので省略
-        //return;
-    }
-
-    // -------------
-    // スプライト
-    // -------------
-    // ソート
-    // 
-    // メモ）優先順位
-    // 低い
-    //   X,YリピートありでPRIO:0
-    //   X,YリピートなしでPRIO:0
-    //                    PRIO:1
-    // 高い
-    s32 order[0x19] = {};
-    s32 idx = 0;
-    // X,YリピートありでPRIO:0
-    for(auto index = 0; index <= 0x18; ++index) {
-        if(!getSpritePrio(ram, index)) {
-            bool repeatY, repeatX, bent1, bent2;
-            getCharacterAttribute(getSpritePattern(ram, index), repeatY, repeatX, bent1, bent2);
-            if(repeatY || repeatX) { order[idx++] = index; }
-        }
-    }
-    // X,YリピートなしでPRIO:0
-    for(auto index = 0; index <= 0x18; ++index) {
-        if(!getSpritePrio(ram, index)) {
-            bool repeatY, repeatX, bent1, bent2;
-            getCharacterAttribute(getSpritePattern(ram, index), repeatY, repeatX, bent1, bent2);
-            if(!(repeatY || repeatX)) { order[idx++] = index; }
-        }
-    }
-    // PRIO:1
-    for(auto index = 0; index <= 0x18; ++index) {
-        if(getSpritePrio(ram, index)) { order[idx++] = index; }
-    }
-    // 優先をつけたスプライトを描画
-    for(const auto index : order) {
-        u16 P     = getSpritePattern(ram, index);   // パターン
-
-        // パターンが0x?7と0x?Fのときは表示しない
-        if(((P & 0x0F) == 0x0F) || ((P & 0x0F) == 0x07)) [[unlikely]] {
-            continue;
-        }
-
-        auto PRIO = getSpritePrio(ram, index);      // 表示優先順位？（色にも影響する？）
-        u32 Y     = getSpriteY(ram, index);         // Y座標
-        u32 SX    = getSpriteX(ram, index);         // X座標
-        const auto patternRomAddressOffset = getSpritePatternRomAddressOffset(ram, index); // パターンROM読み出し時のオフセット
-
-        // @todo 色
-        const auto data3 = ram[index * 4 + 3];
-        u32 rgb   = ((data3 >> 1) & 7) | (PRIO << 3); // | forgroundColor; // prio rgb
-        rgb = tblSpriteToRGB[rgb]; // PRIO:RGB
-
-        // リピートやベントのパターンの属性の取得
-        bool repeatY, repeatX, bent1, bent2;
-        getCharacterAttribute(P, repeatY, repeatX, bent1, bent2);
-
-        do {
-            auto X = SX;
-            do {
-                if(P < 0x70) {
-                    // 7x7
-                    const auto base = (P - (P / 8)) * 7;
-                    for(auto line = 0; line < 7; ++line) {
-                        const auto pattern = patternRom[base + (line + patternRomAddressOffset) % 7];
-                        if(pattern & 0x40) pset(X + 0, Y + line, rgb, bent1, bent2);
-                        if(pattern & 0x20) pset(X + 1, Y + line, rgb, bent1, bent2);
-                        if(pattern & 0x10) pset(X + 2, Y + line, rgb, bent1, bent2);
-                        if(pattern & 0x08) pset(X + 3, Y + line, rgb, bent1, bent2);
-                        if(pattern & 0x04) pset(X + 4, Y + line, rgb, bent1, bent2);
-                        if(pattern & 0x02) pset(X + 5, Y + line, rgb, bent1, bent2);
-                        if(pattern & 0x01) pset(X + 6, Y + line, rgb, bent1, bent2);
-                    }
-                    X += 7;
-                } else {
-                    // 8x7
-                    const auto base = (P - 0x70 - ((P - 0x70) / 8)) * 7;
-                    for(auto line = 0; line < 7; ++line) {
-                        const auto pattern = patternRom8[base + (line + patternRomAddressOffset) % 7];
-                        if(pattern & 0x80) pset(X + 0, Y + line, rgb, bent1, bent2);
-                        if(pattern & 0x40) pset(X + 1, Y + line, rgb, bent1, bent2);
-                        if(pattern & 0x20) pset(X + 2, Y + line, rgb, bent1, bent2);
-                        if(pattern & 0x10) pset(X + 3, Y + line, rgb, bent1, bent2);
-                        if(pattern & 0x08) pset(X + 4, Y + line, rgb, bent1, bent2);
-                        if(pattern & 0x04) pset(X + 5, Y + line, rgb, bent1, bent2);
-                        if(pattern & 0x02) pset(X + 6, Y + line, rgb, bent1, bent2);
-                        if(pattern & 0x01) pset(X + 7, Y + line, rgb, bent1, bent2);
-                    }
-                    X += 8;
-                }
-            } while(repeatX && X <= (75+8));
-            Y += 7;
-        } while(repeatY && Y < (60+7));
-    }
 }
 
 void
