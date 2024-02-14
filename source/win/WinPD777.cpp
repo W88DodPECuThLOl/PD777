@@ -158,38 +158,42 @@ WinPD777::registerDump()
 }
 
 bool
-WinPD777::isPD1()
+WinPD777::isPD1(u8& value)
 {
     s32 gamePadIndex = 0;
     cat::core::pad::GamePadState gamePadState;
     cat::core::pad::getPadState(gamePadIndex, &gamePadState);
+    value = ((PAD_MAX_VALUE - PAD_MIN_VALUE) / 2) * (1.0 - gamePadState.analogs[0].y);
     return (gamePadState.buttons & (cat::core::pad::ButtonMask::X | cat::core::pad::ButtonMask::DPAD_LEFT)) != 0;
 }
 
 bool
-WinPD777::isPD2()
+WinPD777::isPD2(u8& value)
 {
     s32 gamePadIndex = 0;
     cat::core::pad::GamePadState gamePadState;
     cat::core::pad::getPadState(gamePadIndex, &gamePadState);
+    value = ((PAD_MAX_VALUE - PAD_MIN_VALUE) / 2) * (gamePadState.analogs[0].x + 1.0);
     return (gamePadState.buttons & (cat::core::pad::ButtonMask::B | cat::core::pad::ButtonMask::DPAD_RIGHT)) != 0;
 }
 
 bool
-WinPD777::isPD3()
+WinPD777::isPD3(u8& value)
 {
     s32 gamePadIndex = 0;
     cat::core::pad::GamePadState gamePadState;
     cat::core::pad::getPadState(gamePadIndex, &gamePadState);
+    value = ((PAD_MAX_VALUE - PAD_MIN_VALUE) / 2) * (gamePadState.analogs[1].x + 1.0);
     return (gamePadState.buttons & (cat::core::pad::ButtonMask::Y | cat::core::pad::ButtonMask::DPAD_UP)) != 0;
 }
 
 bool
-WinPD777::isPD4()
+WinPD777::isPD4(u8& value)
 {
     s32 gamePadIndex = 0;
     cat::core::pad::GamePadState gamePadState;
     cat::core::pad::getPadState(gamePadIndex, &gamePadState);
+    value = ((PAD_MAX_VALUE - PAD_MIN_VALUE) / 2) * (1.0 - gamePadState.analogs[1].y);
     return (gamePadState.buttons & (cat::core::pad::ButtonMask::A | cat::core::pad::ButtonMask::DPAD_DOWN)) != 0;
 }
 

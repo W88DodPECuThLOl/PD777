@@ -19,10 +19,10 @@ protected:
     virtual void setFLS(const s64 clockCounter, const u8 value) override;
     virtual void setFRS(const s64 clockCounter, const u8 value) override;
     // input
-    virtual bool isPD1() override;
-    virtual bool isPD2() override;
-    virtual bool isPD3() override;
-    virtual bool isPD4() override;
+    virtual bool isPD1(u8& value) override;
+    virtual bool isPD2(u8& value) override;
+    virtual bool isPD3(u8& value) override;
+    virtual bool isPD4(u8& value) override;
     virtual u8 readKIN(const u8 STB) override;
 public:
     virtual void registerDump() override;

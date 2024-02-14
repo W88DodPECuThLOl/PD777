@@ -173,72 +173,88 @@ void
 PD777::execPD1_J(const u16 pc, const u16 code)
 {
 //    print(pc, code, "PD1", u8"Skip if (PD1 input) = 1", u8"J");
-    if(isPD1()) {
+    u8 value = 0;
+    if(isPD1(value)) {
         regs.setSkip();
     }
+    writeMemAtHL(value);
 }
 
 void
 PD777::execPD2_J(const u16 pc, const u16 code)
 {
 //    print(pc, code, "PD2", u8"Skip if (PD2 input) = 1", u8"J");
-    if(isPD2()) {
+    u8 value = 0;
+    if(isPD2(value)) {
         regs.setSkip();
     }
+    writeMemAtHL(value);
 }
 
 void
 PD777::execPD3_J(const u16 pc, const u16 code)
 {
 //    print(pc, code, "PD3", u8"Skip if (PD3 input) = 1", u8"J");
-    if(isPD3()) {
+    u8 value = 0;
+    if(isPD3(value)) {
         regs.setSkip();
     }
+    writeMemAtHL(value);
 }
 
 void
 PD777::execPD4_J(const u16 pc, const u16 code)
 {
 //    print(pc, code, "PD4", u8"Skip if (PD4 input) = 1", u8"J");
-    if(isPD4()) {
+    u8 value = 0;
+    if(isPD4(value)) {
         regs.setSkip();
     }
+    writeMemAtHL(value);
 }
 
 void
 PD777::execPD1_NJ(const u16 pc, const u16 code)
 {
 //    print(pc, code, "PD1", u8"Skip if (PD1 input) = 0", u8"J/");
-    if(!isPD1()) {
+    u8 value = 0;
+    if(!isPD1(value)) {
         regs.setSkip();
     }
+    writeMemAtHL(value);
 }
 
 void
 PD777::execPD2_NJ(const u16 pc, const u16 code)
 {
 //    print(pc, code, "PD2", u8"Skip if (PD2 input) = 0", u8"J/");
-    if(!isPD2()) {
+    u8 value = 0;
+    if(!isPD2(value)) {
         regs.setSkip();
     }
+    writeMemAtHL(value);
 }
 
 void
 PD777::execPD3_NJ(const u16 pc, const u16 code)
 {
 //    print(pc, code, "PD3", u8"Skip if (PD3 input) = 0", u8"J/");
-    if(!isPD3()) {
+    u8 value = 0;
+    if(!isPD3(value)) {
         regs.setSkip();
     }
+    writeMemAtHL(value);
 }
 
 void
 PD777::execPD4_NJ(const u16 pc, const u16 code)
 {
 //    print(pc, code, "PD4", u8"Skip if (PD4 input) = 0", u8"J/");
-    if(!isPD4()) {
+    u8 value = 0;
+    if(!isPD4(value)) {
         regs.setSkip();
     }
+    writeMemAtHL(value);
 }
 
 void

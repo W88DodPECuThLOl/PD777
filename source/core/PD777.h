@@ -303,14 +303,44 @@ protected:
     virtual void setFRS(const s64 clockCounter, const u8 value) {}
 
     // input
+
     /**
-     * @brief PD1が押されているかどうか
-     * @return 押されていたらtrueを返す
+     * @brief パッドの値の範囲、下限値
      */
-    virtual bool isPD1() { return false; }
-    virtual bool isPD2() { return false; }
-    virtual bool isPD3() { return false; }
-    virtual bool isPD4() { return false; }
+    static constexpr u8 PAD_MIN_VALUE = 0;
+    /**
+     * @brief パッドの値の範囲、上限値
+     */
+    static constexpr u8 PAD_MAX_VALUE = 105;
+
+    /**
+     * @brief PD1の入力を取得する
+     * 
+     * @param[out]  value   パッドの値(PAD_MIN_VALUE～PAD_MAX_VALUE)
+     * @return 入力されていたらtrueを返す
+     */
+    virtual bool isPD1(u8& value) { value = PAD_MIN_VALUE; return false; }
+    /**
+     * @brief PD2の入力を取得する
+     * 
+     * @param[out]  value   パッドの値(PAD_MIN_VALUE～PAD_MAX_VALUE)
+     * @return 入力されていたらtrueを返す
+     */
+    virtual bool isPD2(u8& value) { value = PAD_MIN_VALUE; return false; }
+    /**
+     * @brief PD3の入力を取得する
+     * 
+     * @param[out]  value   パッドの値(PAD_MIN_VALUE～PAD_MAX_VALUE)
+     * @return 入力されていたらtrueを返す
+     */
+    virtual bool isPD3(u8& value) { value = PAD_MIN_VALUE; return false; }
+    /**
+     * @brief PD4の入力を取得する
+     * 
+     * @param[out]  value   パッドの値(PAD_MIN_VALUE～PAD_MAX_VALUE)
+     * @return 入力されていたらtrueを返す
+     */
+    virtual bool isPD4(u8& value) { value = PAD_MIN_VALUE; return false; }
 
     /**
      * @brief KINの値
