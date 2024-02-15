@@ -7,18 +7,37 @@
 
 #pragma comment (lib, "Winmm.lib")
 
+namespace {
+
+inline f32 clamp(f32 value, const f32 minValue, const f32 maxValue)
+{
+    if(value < minValue) { return minValue; }
+    if(value > maxValue) { return maxValue; }
+    return value;
+}
+
+} // namespace
+
 class WinImage {
 public:
     static constexpr s32 WIDTH = 75*4;
     static constexpr s32 HEIGHT = 60*4;
 
-    BITMAPINFO bmpInfo;
-    LPDWORD lpPixel = 0;
+    BITMAPINFO bmpInfo {};
+    LPDWORD lpPixel;
 
     HBITMAP hBitmap;
     HDC hMemDC;
 
     HWND hwnd;
+
+    WinImage()
+        : lpPixel()
+        , hBitmap()
+        , hMemDC()
+        , hwnd()
+    {
+    }
 
     void make(HWND hwnd)
     {
@@ -34,15 +53,25 @@ public:
 
         //DIBSection作成
         auto hdc = GetDC(hwnd);
-        hBitmap = CreateDIBSection(hdc, &bmpInfo, DIB_RGB_COLORS, (void**)&lpPixel, NULL, 0);
         hMemDC = CreateCompatibleDC(hdc);
-        SelectObject(hMemDC,hBitmap);
+        if(hMemDC) {
+            hBitmap = CreateDIBSection(hdc, &bmpInfo, DIB_RGB_COLORS, (void**)&lpPixel, NULL, 0);
+            if(hBitmap) {
+                SelectObject(hMemDC,hBitmap);
+            }
+        }
         ReleaseDC(hwnd,hdc);
     }
 
     void release() {
-        DeleteDC(hMemDC);
-        DeleteObject(hBitmap);
+        if(hBitmap) {
+            DeleteObject(hBitmap);
+            hBitmap = 0;
+        }
+        if(hMemDC) {
+            DeleteDC(hMemDC);
+            hMemDC = 0;
+        }
     }
 
     void onPaint(HWND hwnd)
@@ -96,7 +125,8 @@ WinPD777::present()
 {
     // フレームバッファからGDIのビットマップにコピー
     {
-        const s32 offsetX = 10*dotWidth;
+        // (10,0)-(84,59)の範囲をGDIにコピーして描画している
+        const s32 offsetX = 10 * dotWidth;
         for(int y = 0; y < WinImage::HEIGHT; y++) {
             for(int x = 0; x < WinImage::WIDTH; x++) {
                 image->lpPixel[x + y * WinImage::WIDTH] = frameBuffer[x + offsetX + (y*frameBufferWidth)];
@@ -163,8 +193,9 @@ WinPD777::isPD1(u8& value)
     s32 gamePadIndex = 0;
     cat::core::pad::GamePadState gamePadState;
     cat::core::pad::getPadState(gamePadIndex, &gamePadState);
-    value = ((PAD_MAX_VALUE - PAD_MIN_VALUE) / 2) * (1.0 - gamePadState.analogs[0].y);
-    return (gamePadState.buttons & (cat::core::pad::ButtonMask::X | cat::core::pad::ButtonMask::DPAD_LEFT)) != 0;
+    padValue[0] = clamp(padValue[0] - gamePadState.analogs[0].y * 0.03f, PAD_MIN_VALUE, PAD_MAX_VALUE);
+    value = (u8)((u8)padValue[0] & 0x7F);
+    return true;
 }
 
 bool
@@ -173,8 +204,9 @@ WinPD777::isPD2(u8& value)
     s32 gamePadIndex = 0;
     cat::core::pad::GamePadState gamePadState;
     cat::core::pad::getPadState(gamePadIndex, &gamePadState);
-    value = ((PAD_MAX_VALUE - PAD_MIN_VALUE) / 2) * (gamePadState.analogs[0].x + 1.0);
-    return (gamePadState.buttons & (cat::core::pad::ButtonMask::B | cat::core::pad::ButtonMask::DPAD_RIGHT)) != 0;
+    padValue[1] = clamp(padValue[1] + gamePadState.analogs[0].x * 0.03f, PAD_MIN_VALUE, PAD_MAX_VALUE);
+    value = (u8)((u8)padValue[1] & 0x7F);
+    return true;
 }
 
 bool
@@ -183,8 +215,9 @@ WinPD777::isPD3(u8& value)
     s32 gamePadIndex = 0;
     cat::core::pad::GamePadState gamePadState;
     cat::core::pad::getPadState(gamePadIndex, &gamePadState);
-    value = ((PAD_MAX_VALUE - PAD_MIN_VALUE) / 2) * (gamePadState.analogs[1].x + 1.0);
-    return (gamePadState.buttons & (cat::core::pad::ButtonMask::Y | cat::core::pad::ButtonMask::DPAD_UP)) != 0;
+    padValue[2] = clamp(padValue[2] + gamePadState.analogs[1].x * 0.03f, PAD_MIN_VALUE, PAD_MAX_VALUE);
+    value = (u8)((u8)padValue[2] & 0x7F);
+    return true;
 }
 
 bool
@@ -193,8 +226,9 @@ WinPD777::isPD4(u8& value)
     s32 gamePadIndex = 0;
     cat::core::pad::GamePadState gamePadState;
     cat::core::pad::getPadState(gamePadIndex, &gamePadState);
-    value = ((PAD_MAX_VALUE - PAD_MIN_VALUE) / 2) * (1.0 - gamePadState.analogs[1].y);
-    return (gamePadState.buttons & (cat::core::pad::ButtonMask::A | cat::core::pad::ButtonMask::DPAD_DOWN)) != 0;
+    padValue[3] = clamp(padValue[3] - gamePadState.analogs[1].y * 0.03f, PAD_MIN_VALUE, PAD_MAX_VALUE);
+    value = (u8)((u8)padValue[3] & 0x7F);
+    return true;
 }
 
 u8

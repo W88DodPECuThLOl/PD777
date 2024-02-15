@@ -7,6 +7,10 @@
 class WinPD777 : public PD777 {
     class WinImage* image;
     bool finished = false;
+    /**
+     * @brief パドル1～パドル4の値
+     */
+    f32 padValue[4] = {};
 public:
     WinPD777(HWND hwnd);
     void onPaint(HWND hwnd);
