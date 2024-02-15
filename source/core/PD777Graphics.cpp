@@ -37,7 +37,7 @@ static const u32 tblBGtoRGB[64] = {
 
                                 // BRIGHTNESS:HUE:BLACK/PRIO:RGB
                                 // 0         : 0 : 0        :010
-    MakeRGB(0x00, 0xFF, 0x00),  // 緑
+    MakeRGB(0x00, 0xB0, 0x00),  // 緑
 
                                 // BRIGHTNESS:HUE:BLACK/PRIO:RGB
                                 // 0         : 0 : 0        :011
@@ -70,7 +70,7 @@ static const u32 tblBGtoRGB[64] = {
 
                                 // BRIGHTNESS:HUE:BLACK/PRIO:RGB
                                 // 0         : 0 : 1        :010
-    MakeRGB(0x00, 0xFF, 0x00),  // 緑
+    MakeRGB(0x00, 0xB0, 0x00),  // 緑
 
                                 // BRIGHTNESS:HUE:BLACK/PRIO:RGB
                                 // 0         : 0 : 1        :011
@@ -107,7 +107,7 @@ static const u32 tblSpriteToRGB[16] = {
     MakeRGB(255, 129, 196),     // 0:100
     MakeRGB(208, 136, 203),     // 0:101
     MakeRGB(255, 161, 31),      // 0:110
-    MakeRGB(0xFF, 0xFF, 0xFF),  // 0:111
+    MakeRGB(0xD0, 0xD0, 0xD0),  // 0:111
     // PRIO:RGB
     //    1:xxx
     MakeRGB(0x00, 0x00, 0x00),  // 1:000
