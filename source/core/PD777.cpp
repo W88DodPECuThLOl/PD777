@@ -21,6 +21,18 @@ void
 PD777::execGPL(const u16 pc, const u16 code)
 {
 //    print(pc, code, "GPL", u8"Skip if (Gun Port Latch) = 1", u8"J");
+
+    // メモ）
+    // 
+    // メモリに書き込む値               スキップ
+    // 撃った        :0x02  当たった    : true
+    // 撃った        :0x02  外れていたら: false
+    // ------------------------------------------
+    // まだ撃ってない:0x00              : false
+
+    u8 value = 0;
+    regs.setSkip(isGunPortLatch(value));
+    writeMemAtHL(value);
 }
 
 

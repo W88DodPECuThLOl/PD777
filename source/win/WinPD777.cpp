@@ -132,6 +132,22 @@ WinPD777::present()
                 image->lpPixel[x + y * WinImage::WIDTH] = frameBuffer[x + offsetX + (y*frameBufferWidth)];
             }
         }
+
+        // 光線銃の照準
+        if(gun.isEnableGun()) {
+            const s32 gunX = gun.getGunX();
+            const s32 gunY = gun.getGunY();
+            gun.setHit(image->lpPixel[gunX + gunY * WinImage::WIDTH] != 0);
+
+            if(gun.isDrawGunTarget()) {
+                for(int x = -2; x < 3; x++) {
+                    image->lpPixel[gunX + x + gunY * WinImage::WIDTH] = 0xFF0000;
+                }
+                for(int y = -2; y < 3; y++) {
+                    image->lpPixel[gunX + (gunY + y) * WinImage::WIDTH] = 0xFF0000;
+                }
+            }
+        }
         image->update(); // 画面の更新要求
     }
 
@@ -229,6 +245,54 @@ WinPD777::isPD4(u8& value)
     padValue[3] = clamp(padValue[3] - gamePadState.analogs[1].y * 0.03f, PAD_MIN_VALUE, PAD_MAX_VALUE);
     value = (u8)((u8)padValue[3] & 0x7F);
     return true;
+}
+
+s32
+WinPD777::Gun::getGunX()
+{
+    s32 gamePadIndex = 0;
+    cat::core::pad::GamePadState gamePadState;
+    cat::core::pad::getPadState(gamePadIndex, &gamePadState);
+    return clamp(gamePadState.analogs[0].x * WinImage::WIDTH * 0.5 + WinImage::WIDTH * 0.5, 5, WinImage::WIDTH - 5);
+}
+
+s32
+WinPD777::Gun::getGunY()
+{
+    s32 gamePadIndex = 0;
+    cat::core::pad::GamePadState gamePadState;
+    cat::core::pad::getPadState(gamePadIndex, &gamePadState);
+    return clamp(-gamePadState.analogs[0].y * WinImage::HEIGHT * 0.5 + WinImage::HEIGHT * 0.5, 5, WinImage::HEIGHT - 5);
+}
+
+bool
+WinPD777::Gun::isFire()
+{
+    s32 gamePadIndex = 0;
+    cat::core::pad::GamePadState gamePadState;
+    cat::core::pad::getPadState(gamePadIndex, &gamePadState);
+    return (gamePadState.buttons & (cat::core::pad::ButtonMask::A | cat::core::pad::ButtonMask::B | cat::core::pad::ButtonMask::X | cat::core::pad::ButtonMask::Y));
+}
+
+bool
+WinPD777::isGunPortLatch(u8& value)
+{
+    // 呼び出されたら、光線銃を有効にする
+    gun.setEnableGun();
+
+    if(gun.isFire()) {
+        // 撃った
+        value = 0x02;
+        if(gun.isHit()) {
+            return true;    // 的に当たっていた
+        } else {
+            return false;   // 外れていた
+        }
+    } else {
+        // 撃ってない
+        value = 0x00;
+        return false;
+    }
 }
 
 u8

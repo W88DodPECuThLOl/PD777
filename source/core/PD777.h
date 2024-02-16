@@ -343,6 +343,21 @@ protected:
     virtual bool isPD4(u8& value) { value = PAD_MIN_VALUE; return false; }
 
     /**
+     * @brief 光線銃の入力
+     * 
+     * @param[out]  value   的に当たっているかどうか
+     * @return 光線銃の状態？
+     * 
+     * value                返り値
+     * ------------------------------------------
+     * 撃った        :0x02  当たった    : true
+     * 撃った        :0x02  外れていたら: false
+     * ------------------------------------------
+     * まだ撃ってない:0x00  falseを返す
+     */
+    virtual bool isGunPortLatch(u8& value) { value = 0; return false; }
+
+    /**
      * @brief KINの値
      */
     enum class KIN : u8 {
