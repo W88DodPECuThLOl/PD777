@@ -4,9 +4,9 @@
 // ROMやイメージを設定してください
 //
 
-#define CHAR_REPEATE_X  (0x1)
-#define CHAR_REPEATE_Y  (0x2)
-#define CHAR_REPEATE_XY (0x3)
+//#define CHAR_REPEAT_X  (0x1) // REPEATの設定は不要になりました
+//#define CHAR_REPEAT_Y  (0x2) // REPEATの設定は不要になりました
+//#define CHAR_REPEAT_XY (0x3) // REPEATの設定は不要になりました
 #define CHAR_BENT1      (0x4)
 #define CHAR_BENT2      (0x8)
 
@@ -946,8 +946,6 @@ const u8 PD777::characterAttribute[0x80*2] = {
 //  No.   属性
     0x58, CHAR_BENT1, // 例）UFOの斜め
     0x59, CHAR_BENT2, // 例）UFOの斜め
-//    0x68, CHAR_REPEATE_Y,   // 例）キャラクタパターンの0x68を Y方向にリピートする
-//    0x76, CHAR_REPEATE_XY,  // 例）キャラクタパターンの0x76を X方向とY方向にリピートする
 
     // 最後の印
     0xFF, 0
