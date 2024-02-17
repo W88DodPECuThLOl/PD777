@@ -127,11 +127,14 @@ static const u32 tblSpriteToRGB[16] = {
 void
 PD777::spriteRasterize(GraphCommandBuffer* commandBuffer, const u8* ram, const u16 verticalCounter)
 {
+return; // メモ）NRM側で描画するようになったので不要に
+#if false
     if(verticalCounter < 24) [[unlikely]] {
         return; // VBLK期間中なので描画しない
     }
     const u16 drawLine = (verticalCounter - 24) / 4;
-    for(auto index = 0; index <= 0x18; ++index) {
+    //for(auto index = 0; index <= 0x18; ++index) {
+    for(auto index = 0x18; index >= 0; --index) {
 #if false // メモ TEST_EQU_MA1_IGNORE_LSBが有効の時はいらない
         // PRIO:1のYリピート
         //
@@ -173,6 +176,7 @@ PD777::spriteRasterize(GraphCommandBuffer* commandBuffer, const u8* ram, const u
             }
         }
     }
+#endif
 }
 
 void
@@ -230,7 +234,7 @@ PD777::getCharacterAttribute(const u8 characterNo, bool& repeatY, bool& repeatX,
 
         if(characterAttribute[i] == characterNo) {
             //repeatX = (characterAttribute[i + 1] & 0x1) != 0;
-            repeatY = (characterAttribute[i + 1] & 0x2) != 0;
+            //repeatY = (characterAttribute[i + 1] & 0x2) != 0;
             if(characterAttribute[i + 1] & 0xC) {
                 // メモ）ベントはパターン番号の最下位ビットでどっちか決まる
                 bent2 = characterNo & 1;
@@ -265,69 +269,84 @@ PD777::makePresentImage()
 
 #if true
     // コマンドバッファの描画
-    // pass0: PRIO==0の物を描画
-    // pass1: PRIO==1の物を描画
-    for(auto pass = 0; pass < 2; ++pass) {
-        for(int i = 0; i < graphBuffer.currentIndex; ++i) {
-            const auto& cmd = graphBuffer.buffer[i];
-            const auto PRIO = cmd.getSpritePrio();
-            if((pass == 0 && PRIO != 0) || (pass == 1 && PRIO == 0)) {
-                continue;
-            }
-            u16 P = cmd.getSpritePattern();   // パターン
-            if(((P & 0x0F) == 0x0F) || ((P & 0x0F) == 0x07)) [[unlikely]] {
-                continue; // パターンが0x?7と0x?Fのときは表示しない
-            }
+    // 
+    // メモ）パスと優先順位とスプライトの描画順番
+    //      低い                      スプライトの描画順番
+    // pass0 | リピートありでPRIO:0 | 0x00から0x18の順に描画   |
+    // pass1 | リピートなしでPRIO:0 | 0x00から0x18の順に描画   |
+    // pass2 |               PRIO:1 | 0x18から0x00の逆順で描画 |
+    //     高い
+    for(auto pass = 0; pass < 3; ++pass) {
+        for(s32 line = 0; line < GraphCommandBuffer::LineSize; ++line) {
+            const auto& lineBuffer = graphBuffer.lineBuffers[line];
+            for(s32 i = 0; i < lineBuffer.currentIndex; ++i) {
+                // メモ）
+                // 描画コマンドは、スプライトの0x00から0x18の順に積まれているので、pass2だけ逆順に処理する
+                const auto& cmd = (pass == 0 || pass == 1) ? lineBuffer.buffer[i] : lineBuffer.buffer[lineBuffer.currentIndex - i - 1];
 
-            const u32 Y = cmd.getDrawLine(); // 描画する1ラインのY座標(0～59)
-            auto patternRomAddressOffset = cmd.getSpritePatternRomAddressOffset(); // パターンROM読み出し時のオフセット
-            if(const u32 SprY  = cmd.getSpriteY(); SprY < Y) {
-                // 差をパターンのアドレスで吸収する
-                u32 dY = Y - SprY;
-                patternRomAddressOffset = (patternRomAddressOffset + dY) % 7;
-            }
-
-            // @todo 色
-            const auto data3 = cmd.spriteData[3];
-            u32 rgb   = ((data3 >> 1) & 7) | (PRIO << 3); // | forgroundColor; // prio rgb
-            if(rgb != 0) {
-                rgb = tblSpriteToRGB[rgb]; // PRIO:RGB
-            } else {
-                rgb = bgColor; // 0:000(PRIO:RGB)のときは背景色に
-            }
-
-            // リピートやベントのパターンの属性の取得
-            bool repeatY, repeatX, bent1, bent2;
-            getCharacterAttribute(P, repeatY, repeatX, bent1, bent2);
-
-            static const s32 repeatEnd[4] = {64+4, 72+4, 80+4, 88};
-            s32 endX = repeatX ? repeatEnd[P & 0x3] : 90; // 右端
-            s32 X = cmd.getSpriteX(); // X座標
-            if(P >= 0x70) {
-                X -= 1; // @todo 8x7のパターンで、位置が1ドット右にずれているので調整
-            }
-            do {
-                if(P < 0x70) {
-                    // 7x7
-                    const auto base = (P - (P / 8)) * 7;
-                    const auto pattern = patternRom[base + patternRomAddressOffset % 7];
-                    for(u8 mask = 0x40; mask > 0 && X <= endX; ++X, mask >>= 1) {
-                        if(pattern & mask) { pset(X, Y, rgb, bent1, bent2); }
-                    }
-                } else {
-                    // 8x7
-                    const auto base = (P - 0x70 - ((P - 0x70) / 8)) * 7;
-                    const auto pattern = patternRom8[base + patternRomAddressOffset % 7];
-                    for(u8 mask = 0x80; mask > 0 && X <= endX; ++X, mask >>= 1) {
-                        if(pattern & mask) { pset(X, Y, rgb, bent1, bent2); }
-                    }
+                u16 P = cmd.getSpritePattern();   // パターン
+                if(((P & 0x0F) == 0x0F) || ((P & 0x0F) == 0x07)) [[unlikely]] {
+                    continue; // パターンが0x?7と0x?Fのときは表示しない
                 }
-            } while(repeatX && X <= endX);
+
+                // リピートやベントのパターンの属性の取得
+                bool repeatY, repeatX, bent1, bent2;
+                getCharacterAttribute(P, repeatY, repeatX, bent1, bent2);
+
+                // パスによる描画制御
+                const auto PRIO = cmd.getSpritePrio();
+                if((pass == 0 && (PRIO != 0 || !repeatX)) // Pass0: リピートありでPRIO:0
+                || (pass == 1 && (PRIO != 0 ||  repeatX)) // Pass1: リピートなしでPRIO:0
+                || (pass == 2 &&  PRIO == 0))             // Pass2: PRIO:1
+                {
+                    continue; // 描画するパスではない
+                }
+
+                const u32 Y = cmd.getDrawLine(); // 描画する1ラインのY座標(0～59)
+                auto patternRomAddressOffset = cmd.getSpritePatternRomAddressOffset(); // パターンROM読み出し時のオフセット
+                if(const u32 SprY  = cmd.getSpriteY(); SprY < Y) {
+                    // 差をパターンのアドレスで吸収する
+                    u32 dY = Y - SprY;
+                    patternRomAddressOffset = (patternRomAddressOffset + dY) % 7;
+                }
+
+                // @todo 色
+                const auto data3 = cmd.spriteData[3];
+                u32 rgb   = ((data3 >> 1) & 7) | (PRIO << 3); // | forgroundColor; // prio rgb
+                if(rgb != 0) {
+                    rgb = tblSpriteToRGB[rgb]; // PRIO:RGB
+                } else {
+                    rgb = bgColor; // 0:000(PRIO:RGB)のときは背景色に
+                }
+
+                static const s32 repeatEnd[4] = {64+4, 72+4, 80+4, 88};
+                s32 endX = repeatX ? repeatEnd[P & 0x3] : 90; // 右端
+                s32 X = cmd.getSpriteX(); // X座標
+                if(P >= 0x70) {
+                    X -= 1; // @todo 8x7のパターンで、位置が1ドット右にずれているので調整
+                }
+                do {
+                    if(P < 0x70) {
+                        // 7x7
+                        const auto base = (P - (P / 8)) * 7;
+                        const auto pattern = patternRom[base + patternRomAddressOffset % 7];
+                        for(u8 mask = 0x40; mask > 0 && X <= endX; ++X, mask >>= 1) {
+                            if(pattern & mask) { pset(X, Y, rgb, bent1, bent2); }
+                        }
+                    } else {
+                        // 8x7
+                        const auto base = (P - 0x70 - ((P - 0x70) / 8)) * 7;
+                        const auto pattern = patternRom8[base + patternRomAddressOffset % 7];
+                        for(u8 mask = 0x80; mask > 0 && X <= endX; ++X, mask >>= 1) {
+                            if(pattern & mask) { pset(X, Y, rgb, bent1, bent2); }
+                        }
+                    }
+                } while(repeatX && X <= endX);
+            }
         }
     }
 #endif
     graphBuffer.reset();
-
 
 #if false
     // -------------

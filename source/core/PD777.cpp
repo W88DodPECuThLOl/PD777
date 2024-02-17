@@ -40,10 +40,14 @@ void
 PD777::execMoveHtoNRM(const u16 pc, const u16 code)
 {
 //    print(pc, code, "H=>NRM", u8"Move H[5:1] to Line Buffer Register[5:1]");
+
     const auto H = regs.getH();
     regs.setLineBufferRegister(H);
 
     const auto verticalCounter = crt.getVerticalCounter();
+    if(verticalCounter < 24) [[unlikely]] {
+        return; // VBLK期間中なので描画しない
+    }
     const auto spriteData0 = readMem((H << 2) | 0);
     const auto spriteData1 = readMem((H << 2) | 1);
     const auto spriteData2 = readMem((H << 2) | 2);
