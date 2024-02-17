@@ -274,6 +274,8 @@ protected:
     void writeMemAtHL(const u8 value);
     u8 readMemAtHL();
     void setMode(const u8 mode);
+    void setFLS(const u8 value);
+    void setFRS(const u8 value);
 protected:
     // memory access
     virtual void writeMem(const u16 address, const u8 value);
@@ -293,14 +295,50 @@ protected:
     // sound
     /**
      * @brief Lチャンネルのサウンドの音程を設定する
+     * 
+     * やんわりメモ）
+     * ・FLSに書き込みがされた時に呼び出される
+     * ・MIDIでいうところのNoteOnみたいな感じ
+     * ・音を出しっぱなしで、MODEレジスタのREV機能（残響音効果）でかっこよく消音させてるっぽい？
+     * 
+     * @param[in]   value                   音程。1は無音
+     * @param[in]   reverberatedSoundEffect 残響音効果が有効かどうか
+     */
+    virtual void setFLS(const s64 clockCounter, const u8 value, const bool reverberatedSoundEffect) {}
+    /**
+     * @brief Lチャンネルのサウンドの音程を更新する
+     * 
+     * メモ）
+     * ・サウンドドライバ側の都合で必要なので、なんとかなれば不要
+     * ・長時間、音が更新されないのを防ぐ為の物
+     * 　・1フレーム毎に呼び出される定期的な更新
+     * 
      * @param[in]   value   音程。1は無音
      */
-    virtual void setFLS(const s64 clockCounter, const u8 value) {}
+    virtual void updateFLS(const s64 clockCounter, const u8 value) {}
     /**
      * @brief Rチャンネルのサウンドの音程を設定する
+     * 
+     * やんわりメモ）
+     * ・FRSに書き込みがされた時に呼び出される
+     * ・MIDIでいうところのNoteOnみたいな感じ
+     * ・音を出しっぱなしで、MODEレジスタのREV機能（残響音効果）でかっこよく消音させてるっぽい？
+     * 
+     * @param[in]   value   音程。1は無音
+     * @param[in]   reverberatedSoundEffect 残響音効果が有効かどうか
+     */
+    virtual void setFRS(const s64 clockCounter, const u8 value, const bool reverberatedSoundEffect) {}
+    /**
+     * @brief Rチャンネルのサウンドの音程を更新する
+     * 
+     * メモ）
+     * ・サウンドドライバ側の都合で必要なので、なんとかなれば不要
+     * ・長時間、音が更新されないのを防ぐ為の物
+     * 　・1フレーム毎に呼び出される定期的な更新
+     * 
      * @param[in]   value   音程。1は無音
      */
-    virtual void setFRS(const s64 clockCounter, const u8 value) {}
+    virtual void updateFRS(const s64 clockCounter, const u8 value) {}
 
     // input
 

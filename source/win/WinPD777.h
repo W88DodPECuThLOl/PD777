@@ -82,8 +82,10 @@ protected:
     // grah
     virtual void present() override;
     // sound
-    virtual void setFLS(const s64 clockCounter, const u8 value) override;
-    virtual void setFRS(const s64 clockCounter, const u8 value) override;
+    virtual void setFLS(const s64 clockCounter, const u8 value, const bool reverberatedSoundEffect) override;
+    virtual void updateFLS(const s64 clockCounter, const u8 value) override;
+    virtual void setFRS(const s64 clockCounter, const u8 value, const bool reverberatedSoundEffect) override;
+    virtual void updateFRS(const s64 clockCounter, const u8 value) override;
     // input
     virtual bool isPD1(u8& value) override;
     virtual bool isPD2(u8& value) override;

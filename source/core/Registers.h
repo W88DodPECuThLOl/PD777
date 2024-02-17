@@ -161,6 +161,7 @@ public:
 
     void setMode(const u8 value) { mode = value & 0x7F; }
     u8 getMode() const { return mode & 0x7F; }
+    bool getREV() const { return (mode & 0x40) != 0; }
 
     void setSkip() { skip = true; }
     void resetSkip() { skip = false; }

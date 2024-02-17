@@ -11,6 +11,17 @@
 namespace cat::core::decoder {
 
 class CassetteVisionAudioDecoder final : public AudioDecoder {
+
+	/**
+	 * @brief 残響効果の開始時間(秒)
+	 */
+	static constexpr double REV_EFFECT_NOTE_OFF_TIME = 0.04;
+
+	/**
+	 * @brief 残響効果の減衰の係数（1に近い程、余韻が長くなる）
+	 */
+	static constexpr double REV_EFFECT_ATTENUATION = 0.9994;
+
 public:
 	CassetteVisionAudioDecoder() {}
 	virtual ~CassetteVisionAudioDecoder() {}
@@ -22,8 +33,6 @@ public:
 	virtual void terminate() override {}
 
 	std::int64_t clockCounter = 0;
-	double currentR = 0;
-	double currentL = 0;
 	virtual std::size_t decode( void* buffer, const std::size_t bufferSize ) override {
 		std::memset( buffer, 0, bufferSize );
 		auto readSize = bufferSize;
@@ -45,6 +54,11 @@ public:
 				if(!src.score.empty()) {
 					Score& s = src.score.front();
 					src.freq = convert(s.value);
+					if(s.noteOn) {
+						src.rev = s.rev;
+						src.revTime = 0;
+						src.revVolume = 1;
+					}
 					if(s.counter-- <= 0) {
 						src.score.pop();
 					}
@@ -52,25 +66,25 @@ public:
 				src.mtxScore.unlock();
 			}
 
-			{
-				auto stepL = source[0].freq *(2.0*3.141592653) / getSamplesPerSec();
-				auto stepR = source[1].freq *(2.0*3.141592653) / getSamplesPerSec();
-				auto r = 0.0;
-				auto l = 0.0;
-				if(source[0].freq > 1) {
-					// l = std::sin(currentL);
-					l = currentL > 3.141592653 ? -1 : 1;
-					currentL = std::fmod(currentL + stepL, 2.0 * 3.141592653);
+			double output = 0.0;
+			for(auto& src : source) {
+				if(src.freq > 1) {
+					auto v = src.phase > 3.141592653 ? -1.0 : 1.0;
+					const auto step = src.freq *(2.0*3.141592653) / getSamplesPerSec();
+					src.phase = std::fmod(src.phase + step, 2.0 * 3.141592653);
+					// REVの処理
+					if(src.rev) {
+						v *= src.revVolume;
+						if(src.revTime++ > getSamplesPerSec() * REV_EFFECT_NOTE_OFF_TIME) {
+							src.revVolume *= REV_EFFECT_ATTENUATION;
+						}
+					}
+					// 合成
+					output += v;
 				}
-				if(source[1].freq > 1) {
-					//r = std::sin(currentR);
-					r = currentR > 3.141592653 ? -1 : 1;
-					currentR = std::fmod(currentR + stepR, 2.0 * 3.141592653);
-				}
-
-				*buf++ = (r + l) * 0.5 * 32767.0 * 0.03;
-				size -= 2;
 			}
+			*buf++ = output * 0.5 * 32767.0 * 0.02;
+			size -= 2;
 		}
 		return readSize;
 	}
@@ -81,15 +95,32 @@ public:
 
 	struct Score {
 		std::int64_t counter;
+		/**
+		 * @brief FLSレジスタ、FRSレジスタに書き込まれた時の値
+		 */
 		std::uint8_t value;
+		/**
+		 * @brief 残響効果が有効かどうか
+		 */
+		bool rev;
+		/**
+		 * @brief ノートオンで発生したものかどうか
+		 * @note  FLSレジスタ、FRSレジスタに書き込まれて発生したものならtrue。
+		 *        定期的な更新で発生したものならfalse。
+		 */
+		bool noteOn;
 	};
 	struct SourceInfo {
 		std::int64_t prevClockCounter = 0;
 		std::mutex	mtxScore;
 		std::queue<Score> score;
-		double currentR = 0;
-		double currentL = 0;
+		double phase = 0.0;
 		std::int32_t freq = 0;
+
+		// REV EFFECT
+		bool rev = false;
+		double revVolume = 0.0;
+		std::int64_t revTime;
 	};
 	SourceInfo source[2];
 
@@ -115,15 +146,17 @@ public:
 		source[1].prevClockCounter = clockCounter;
 	}
 
-	void setScore(const std::int64_t clockCounter, const std::uint8_t value, const std::int32_t index)
+	void setScore(const std::int64_t clockCounter, const std::uint8_t value, const std::int32_t index, bool noteOn, bool reverberatedSoundEffect = false)
 	{
 		auto& src = source[index];
 
 		Score s;
-		s.counter = (clockCounter - src.prevClockCounter) * CPUClock_period_s * 48000.0;
+		s.counter = (clockCounter - src.prevClockCounter) * CPUClock_period_s * getSamplesPerSec();
 		s.counter *= 0.98; // 少し早くしておく
 		if(s.counter <= 48000.0 * (1.0/60.0)) {
-			s.value = value;
+			s.value  = value;
+			s.rev    = reverberatedSoundEffect;
+			s.noteOn = noteOn;
 			src.mtxScore.lock();
 			if(src.score.size() < 128) {
 				src.score.push(s);
@@ -133,13 +166,21 @@ public:
 		src.prevClockCounter = clockCounter;
 	}
 
-	void setFLS(const std::int64_t clockCounter, const std::uint8_t value)
+	void updateFLS(const std::int64_t clockCounter, const std::uint8_t value)
 	{
-		setScore(clockCounter, value, 0);
+		setScore(clockCounter, value, 0, false);
 	}
-	void setFRS(const std::int64_t clockCounter, const std::uint8_t value)
+	void setFLS(const std::int64_t clockCounter, const std::uint8_t value, const bool reverberatedSoundEffect)
 	{
-		setScore(clockCounter, value, 1);
+		setScore(clockCounter, value, 0, true, reverberatedSoundEffect);
+	}
+	void updateFRS(const std::int64_t clockCounter, const std::uint8_t value)
+	{
+		setScore(clockCounter, value, 1, false);
+	}
+	void setFRS(const std::int64_t clockCounter, const std::uint8_t value, const bool reverberatedSoundEffect)
+	{
+		setScore(clockCounter, value, 1, true, reverberatedSoundEffect);
 	}
 };
 

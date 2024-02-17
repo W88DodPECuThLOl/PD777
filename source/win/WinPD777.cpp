@@ -74,7 +74,7 @@ public:
         }
     }
 
-    void onPaint(HWND hwnd)
+    void onPaint(HWND hwnd) const
     {
         RECT rect;
         GetClientRect(hwnd, &rect);
@@ -350,18 +350,34 @@ WinPD777::readKIN(const u8 STB)
 }
 
 void
-WinPD777::setFLS(const s64 clockCounter, const u8 value)
+WinPD777::updateFLS(const s64 clockCounter, const u8 value)
 {
     if(auto snd = getSound(clockCounter); snd) {
-        snd->setFLS(clockCounter, value);
+        snd->updateFLS(clockCounter, value);
     }
 }
 
 void
-WinPD777::setFRS(const s64 clockCounter, const u8 value)
+WinPD777::setFLS(const s64 clockCounter, const u8 value, const bool reverberatedSoundEffect)
 {
     if(auto snd = getSound(clockCounter); snd) {
-        snd->setFRS(clockCounter, value);
+        snd->setFLS(clockCounter, value, reverberatedSoundEffect);
+    }
+}
+
+void
+WinPD777::updateFRS(const s64 clockCounter, const u8 value)
+{
+    if(auto snd = getSound(clockCounter); snd) {
+        snd->updateFRS(clockCounter, value);
+    }
+}
+
+void
+WinPD777::setFRS(const s64 clockCounter, const u8 value, const bool reverberatedSoundEffect)
+{
+    if(auto snd = getSound(clockCounter); snd) {
+        snd->setFRS(clockCounter, value, reverberatedSoundEffect);
     }
 }
 

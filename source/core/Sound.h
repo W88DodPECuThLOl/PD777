@@ -25,6 +25,12 @@ class Sound {
      * CPUが実行した命令数
      */
     s64 clockCounter = 0;
+
+    /**
+     * @brief MODEのREV(Reverberated Sound Effect)の値
+     * 残響音効果音
+     */
+    bool reverberatedSoundEffect = false;
 public:
     /**
      * @brief リセット
@@ -34,6 +40,7 @@ public:
         clockCounter = 0;
         FLS = 1;
         FRS = 1;
+        reverberatedSoundEffect = false;
     }
 
     void updateCounter() { ++clockCounter; }
@@ -51,4 +58,7 @@ public:
      */
     void setFRS(const u8 value) { FRS = value; }
     const u8 getFRS() const { return FRS; }
+
+    void setReverberatedSoundEffect(const bool reverberatedSoundEffect) { this->reverberatedSoundEffect = reverberatedSoundEffect; }
+    bool getReverberatedSoundEffect() const { return reverberatedSoundEffect; }
 };
