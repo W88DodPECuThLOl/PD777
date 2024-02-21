@@ -19,6 +19,27 @@ class CRT {
      */
     u16 verticalCounter;
 public:
+    //
+    static constexpr u8 HORIZONTAL_DOT_MIN = 0;
+    static constexpr u8 HORIZONTAL_DOT_MAX = 90;
+    static_assert(HORIZONTAL_DOT_MIN <= HORIZONTAL_DOT_MAX);
+    static constexpr u8 DOT_WIDTH = (HORIZONTAL_DOT_MAX - HORIZONTAL_DOT_MIN) + 1;
+    //
+    static constexpr u16 VERTICAL_DOT_MIN = 0;
+    static constexpr u16 VERTICAL_DOT_MAX = 59;
+    static_assert(VERTICAL_DOT_MIN <= VERTICAL_DOT_MAX);
+    static constexpr u16 DOT_HEIGHT = (VERTICAL_DOT_MAX - VERTICAL_DOT_MIN) + 1;
+    //
+    static constexpr u16 HORIZONTAL_BLANK_START = 0;
+    static constexpr u16 HORIZONTAL_BLANK_END = 15;
+    static_assert(HORIZONTAL_BLANK_START <= HORIZONTAL_BLANK_END);
+    static constexpr u16 HORIZONTAL_BLANK_WIDTH = (HORIZONTAL_BLANK_END - HORIZONTAL_BLANK_START) + 1;
+    //
+    static constexpr u16 VERTICAL_BLANK_START = 0;
+    static constexpr u16 VERTICAL_BLANK_END = 23;
+    static_assert(VERTICAL_BLANK_START <= VERTICAL_BLANK_END);
+    static constexpr u16 VERTICAL_BLANK_HEIGHT = (VERTICAL_BLANK_END - VERTICAL_BLANK_START) + 1;
+public:
     /**
      * @brief   コンストラクタ
      */
@@ -65,7 +86,7 @@ public:
         // CPU Clock                    1.431818 MHz ( = 3.579545 MHz / 2.5)
         // NTSC Horizontal Frequency    15.734   KHz
         // １ラインで実行出来るCPUの命令数 1431818 / 15734 = 91.00152535909495
-        if(++horizontalCounter >= 91) [[unlikely]] {
+        if(++horizontalCounter >= DOT_WIDTH) [[unlikely]] {
             horizontalCounter = 0;
 
             const auto prevVBLK = isVBLK();
@@ -97,7 +118,7 @@ public:
     bool is4H_BLK() const
     {
         return ((verticalCounter & 3) == 0)
-            && (horizontalCounter <= 15);
+            && (horizontalCounter <= HORIZONTAL_BLANK_END);
     }
 
     /**
@@ -108,10 +129,6 @@ public:
      */
     bool isVBLK() const
     {
-        if(field == 0) {
-            return verticalCounter < 24;
-        } else {
-            return verticalCounter < 24;
-        }
+        return verticalCounter <= VERTICAL_BLANK_END;
     }
 };

@@ -20,8 +20,8 @@ inline f32 clamp(f32 value, const f32 minValue, const f32 maxValue)
 
 class WinImage {
 public:
-    static constexpr s32 WIDTH = 75*4;
-    static constexpr s32 HEIGHT = 60*4;
+    static constexpr s32 WIDTH = 75 * PD777::dotWidth;
+    static constexpr s32 HEIGHT = 60 * PD777::dotHeight;
 
     BITMAPINFO bmpInfo {};
     LPDWORD lpPixel;

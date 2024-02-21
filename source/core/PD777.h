@@ -15,6 +15,25 @@
  * @brief   μPD777
  */
 class PD777 : public Decoder {
+public:
+    // presentで使うフレームバッファ
+    /**
+     * @brief フレームバッファ上でのμPD777の１ドット高さ
+     */
+    static constexpr s32 dotHeight = 4;
+    /**
+     * @brief フレームバッファ上でのμPD777の１ドット幅
+     */
+    static constexpr s32 dotWidth = 5;
+
+    /**
+     * @brief フレームバッファの高さ
+     */
+    static constexpr u32 frameBufferHeight = 128*dotHeight;
+    /**
+     * @brief フレームバッファの横幅
+     */
+    static constexpr u32 frameBufferWidth = 128*dotWidth;
 protected:
     /**
      * @brief ROMデータの元
@@ -41,23 +60,6 @@ protected:
     Stack stack;
     Sound sound;
 
-    // presentで使うフレームバッファ
-    /**
-     * @brief フレームバッファ上でのμPD777の１ドット高さ
-     */
-    static constexpr s32 dotHeight = 4;
-    /**
-     * @brief フレームバッファ上でのμPD777の１ドット幅
-     */
-    static constexpr s32 dotWidth = 4;
-    /**
-     * @brief フレームバッファの高さ
-     */
-    static constexpr u32 frameBufferHeight = 128*dotHeight;
-    /**
-     * @brief フレームバッファの横幅
-     */
-    static constexpr u32 frameBufferWidth = 128*dotWidth;
     /**
      * @brief presentで使うフレームバッファ
      */
@@ -77,34 +79,75 @@ private:
     void setupRom();
 
     /**
-     * @brief キャラクタの属性を取得する
-     * @param[in]   characterNo キャラクタ
-     * @param[out]  repeatY     Y方向にリピートするかどうか
-     * @param[out]  repeatX     X方向にリピートするかどうか
-     * @param[out]  bent1       斜めのドットかどうか
-     * @param[out]  bent2       斜めのドットかどうか
+     * @brief ドットの形状
      */
-    void getCharacterAttribute(const u8 characterNo, bool& repeatY, bool& repeatX, bool& bent1, bool& bent2);
-    /**
-     * @brief 1ドット描画する
-     * @param[in]   x       X座標(0～90)
-     * @param[in]   y       Y座標(0～59)
-     * @param[in]   rgb     色
-     * @param[in]   bent1   ベント1
-     * @param[in]   bent2   ベント2
-     */
-    void pset(s32 x, s32 y, u32 rgb, bool bent1, bool bent2);
+    enum class DOT_PATTERN : u8 {
+        //
+        // 通常
+        //
+
+        /**
+         * @brief なし
+         */
+        NONE = 0,
+        /**
+         * @brief 四角
+         * 
+         * ■
+         */
+        NORMAL = 1,
+
+        //
+        // ベント
+        //
+
+        /**
+         * @brief ベント開始の斜め
+         *  ___
+         *  ＼|
+         */
+        BENT1_START = 2,
+        /**
+         * @brief ベント終了時の斜め
+         *
+         *  |＼
+         *  ~~~
+         */
+        BENT1_END,
+        /**
+         * @brief ベント開始の斜め
+         * 
+         *  ／|
+         *  ~~~
+         */
+        BENT2_START = 4,
+        /**
+         * @brief ベント終了時の斜め
+         *  ___
+         *  |／
+         */
+        BENT2_END,
+    };
 
     /**
-     * @brief スプライトをラスタライズする
+     * @brief ドットを描画する
      * 
-     * スプライトをラスタライズして、描画コマンドバッファに描画コマンドを追加する。
-     * 
-     * @param[in,out]   commandBuffer   描画コマンドバッファ
-     * @param[in]       ram             メモリ
-     * @param[in]       verticalCounter 垂直カウンタ（ライスタライズする位置）
+     * @param[in]   x       描画するドットの座標(0～90)
+     * @param[in]   y       描画するドットの座標(0～59)
+     * @param[in]   color   ドットの色(R8G8B8)
+     * @param[in]   bgColor 背景色(R8G8B8)
+     * @param[in]   pattern 描画するドットの形状(DOT_PATTERN)
      */
-    void spriteRasterize(GraphCommandBuffer* commandBuffer, const u8* ram, const u16 verticalCounter);
+    void pset(s32 x, s32 y, const u32 color, const u32 bgColor, const DOT_PATTERN pattern);
+
+    /**
+     * @brief ドット情報を元に１ライン描画する
+     * 
+     * @param[in]   dotInfo １ラインのドット情報
+     * @param[in]   line    ラインの位置（0～59)。ドットを描画するY座標
+     * @param[in]   bgColor 背景色(R8G8B8)
+     */
+    void dotRender(const DotInfo* dotInfo, const s32 line, const u32 bgColor);
 
 protected:
     virtual void execNOP(const u16 pc, const u16 code) override;
@@ -284,7 +327,7 @@ protected:
     // graph
     /**
      * @brief present()で使用するイメージを作成する
-     * 128x128のframeBufferにイメージが作成される。
+     * frameBufferにイメージが作成される。
      */
     virtual void makePresentImage();
     /**
@@ -343,39 +386,39 @@ protected:
     // input
 
     /**
-     * @brief パッドの値の範囲、下限値
+     * @brief パドルの値の範囲、下限値
      */
     static constexpr u8 PAD_MIN_VALUE = 0;
     /**
-     * @brief パッドの値の範囲、上限値
+     * @brief パドルの値の範囲、上限値
      */
     static constexpr u8 PAD_MAX_VALUE = 105;
 
     /**
      * @brief PD1の入力を取得する
      * 
-     * @param[out]  value   パッドの値(PAD_MIN_VALUE～PAD_MAX_VALUE)
+     * @param[out]  value   パドルの値(PAD_MIN_VALUE～PAD_MAX_VALUE)
      * @return 入力されていたらtrueを返す
      */
     virtual bool isPD1(u8& value) { value = PAD_MIN_VALUE; return false; }
     /**
      * @brief PD2の入力を取得する
      * 
-     * @param[out]  value   パッドの値(PAD_MIN_VALUE～PAD_MAX_VALUE)
+     * @param[out]  value   パドルの値(PAD_MIN_VALUE～PAD_MAX_VALUE)
      * @return 入力されていたらtrueを返す
      */
     virtual bool isPD2(u8& value) { value = PAD_MIN_VALUE; return false; }
     /**
      * @brief PD3の入力を取得する
      * 
-     * @param[out]  value   パッドの値(PAD_MIN_VALUE～PAD_MAX_VALUE)
+     * @param[out]  value   パドルの値(PAD_MIN_VALUE～PAD_MAX_VALUE)
      * @return 入力されていたらtrueを返す
      */
     virtual bool isPD3(u8& value) { value = PAD_MIN_VALUE; return false; }
     /**
      * @brief PD4の入力を取得する
      * 
-     * @param[out]  value   パッドの値(PAD_MIN_VALUE～PAD_MAX_VALUE)
+     * @param[out]  value   パドルの値(PAD_MIN_VALUE～PAD_MAX_VALUE)
      * @return 入力されていたらtrueを返す
      */
     virtual bool isPD4(u8& value) { value = PAD_MIN_VALUE; return false; }

@@ -42,8 +42,7 @@ int main()
     const std::string className = "CatWindowClassEx";
     std::unique_ptr<cat::win::WindowClassEx> windowClassEx = std::make_unique<cat::win::WindowClassEx>(hInstance, className, WindowProc);
     const std::string windowName = "μPD777";
-    std::unique_ptr<cat::win::Window> window = std::make_unique<cat::win::Window>(hInstance, className, windowName);
-
+    std::unique_ptr<cat::win::Window> window = std::make_unique<cat::win::Window>(hInstance, className, windowName, 375*2, 240*2);
     std::unique_ptr<WinPD777> cpu = std::make_unique<WinPD777>(window->getWindowHandle());
     cpu->init();
     SetWindowLongPtr(window->getWindowHandle(), GWLP_USERDATA, reinterpret_cast<LONG_PTR>(cpu.get()));

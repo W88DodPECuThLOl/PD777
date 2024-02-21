@@ -64,4 +64,13 @@ struct GraphCommand {
         const u8 ySUB  = data3 & 1;
         return (y - ySUB) & 0x7;
     }
+
+    inline const u8 getSpriteColor() const {
+        const auto PRIO = getSpritePrio();
+        const auto data3 = spriteData[3];
+        return ((data3 >> 1) & 7) | (PRIO << 3); // | forgroundColor; // prio rgb
+    }
+    inline const u8 getSpriteBentType() const {
+        return (getSpritePattern() & 1) ? 1 : 0;
+    }
 };

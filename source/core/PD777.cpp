@@ -2108,9 +2108,6 @@ void PD777::execute()
             writeMem(address, value & ~1);
         }
 
-        // ラスタライズ
-        spriteRasterize(&graphBuffer, ram, crt.getVerticalCounter());
-
         // イメージ作成
         makePresentImage();
         // 作成したイメージを画面に出力する
@@ -2127,9 +2124,6 @@ void PD777::execute()
                 const auto value = readMem(address);
                 writeMem(address, value & ~1);
             }
-
-            // ラスタライズ
-            spriteRasterize(&graphBuffer, ram, crt.getVerticalCounter());
         }
     }
 

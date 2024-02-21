@@ -9,11 +9,11 @@ namespace cat::win {
 class Window {
 	HWND hwnd;
 public:
-	Window(HINSTANCE instance, const std::string& className, const std::string& windowName)
+	Window(HINSTANCE instance, const std::string& className, const std::string& windowName, const int windowWidth, const int windowHeight)
 		: hwnd(NULL)
 	{
 		constexpr DWORD style = WS_OVERLAPPEDWINDOW;
-		RECT windowRect = {0, 0, 80*4*2, 60*4*2};
+		RECT windowRect = {0, 0, windowWidth, windowHeight};
 		AdjustWindowRect( &windowRect, style, FALSE );
 		hwnd = CreateWindowEx(
 			0,                              // Optional window styles.
