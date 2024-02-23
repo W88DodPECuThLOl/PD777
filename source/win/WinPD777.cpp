@@ -348,6 +348,17 @@ WinPD777::readKIN(const u8 STB)
                 if(gamePadState.buttons & (cat::core::pad::ButtonMask::A | cat::core::pad::ButtonMask::B | cat::core::pad::ButtonMask::X | cat::core::pad::ButtonMask::Y)) {
                     value |= (u8)KIN::Push2; // 0x20
                 }
+
+                // @todo FIX ME!!
+                if(getCassetteNumber() == 6) {
+                    // 特殊処理
+                    if(gamePadState.buttons & cat::core::pad::ButtonMask::X) {
+                        value |= (u8)KIN::LeverSwitchLeft;
+                    }
+                    if(gamePadState.buttons & cat::core::pad::ButtonMask::B) {
+                        value |= (u8)KIN::LeverSwitchRight;
+                    }
+                }
             }
             break;
         case 0x5:

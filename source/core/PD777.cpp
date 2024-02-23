@@ -2050,8 +2050,6 @@ PD777::execJS(const u16 pc, const u16 code)
 
 
 
-
-
 void
 PD777::setupRom()
 {
@@ -2060,6 +2058,17 @@ PD777::setupRom()
         const auto address = rawRom[i + 0]; // アドレス
         const auto code    = rawRom[i + 1]; // データ
         rom[address] = code;
+    }
+
+    // 適当計算
+    // @todo かっこいいのに変更すること！
+    {
+        u32 checkSum = 0;
+        for(auto& r : rom) { checkSum += r; }
+        cassetteNumber = 0;
+        switch(checkSum) {
+            case 0x003d26f4: cassetteNumber = 6; break;
+        }
     }
 }
 

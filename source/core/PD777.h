@@ -72,6 +72,8 @@ protected:
     // for debug
     Disassembler disassembler;
 #endif // defined(_WIN32)
+
+    u32 cassetteNumber = 0;
 private:
     /**
      * @brief   romをセットアップする
@@ -502,6 +504,10 @@ public:
     void disassemble(const u16 pc, const u16 code);
     void disassembleAll();
 
+    /**
+     * @brief カセットの番号を返す
+     */
+    u32 getCassetteNumber() const { return cassetteNumber; }
 public:
     /**
      * @brief 初期化
