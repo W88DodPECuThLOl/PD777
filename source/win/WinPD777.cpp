@@ -352,7 +352,26 @@ WinPD777::readKIN(const u8 STB)
             break;
         case 0x5:
             {
-                u8 courseSwitch = 3;
+                u8 courseSwitch = getCourseSwitch();
+                {
+                    // メモ）コーススイッチをデジタルパッドの上下で切り替えられるように
+                    static cat::core::pad::GamePadButtonState prevButtons = 0;
+                    auto fallingEdge = (gamePadState.buttons ^ prevButtons) & ~gamePadState.buttons;
+                    if(fallingEdge & cat::core::pad::ButtonMask::DPAD_UP) {
+                        if(courseSwitch < 5) {
+                            courseSwitch++;
+                            setCourseSwitch(courseSwitch);
+                        }
+                    }
+                    if(fallingEdge & cat::core::pad::ButtonMask::DPAD_DOWN) {
+                        if(courseSwitch > 1) {
+                            courseSwitch--;
+                            setCourseSwitch(courseSwitch);
+                        }
+                    }
+                    prevButtons = gamePadState.buttons;
+                }
+
                 switch(courseSwitch) {
                     case 1: // コーススイッチ1
                         value = (u8)0x01;

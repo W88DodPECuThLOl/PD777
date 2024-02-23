@@ -73,11 +73,26 @@ class WinPD777 : public PD777 {
      * @brief 光線銃
      */
     Gun gun;
+
+    /**
+     * @brief コーススイッチ（1～5）
+     */
+    u8 courseSwitch = 3;
+    /**
+     * @brief コーススイッチを取得する
+     * @return コーススイッチ（1～5）
+     */
+    u8 getCourseSwitch() const { return courseSwitch; }
 public:
     WinPD777(HWND hwnd);
     void onPaint(HWND hwnd);
     bool isFinish() const { return finished; }
     void setFinish() { finished = true; }
+    /**
+     * @brief コーススイッチを設定する
+     * @param[in]   courseSwitch    コーススイッチ（1～5）
+     */
+    void setCourseSwitch(const u8 courseSwitch) { this->courseSwitch = courseSwitch; }
 protected:
     // grah
     virtual void present() override;
