@@ -310,41 +310,127 @@ WinPD777::readKIN(const u8 STB)
     // 
 
     u8 value = (u8)KIN::None;
-    if(STB == 0xD) {
-        // ４方向使用するときの上下
-        if((gamePadState.buttons & (cat::core::pad::ButtonMask::DPAD_UP | cat::core::pad::ButtonMask::Y)) || (gamePadState.analogs[0].y > 0.3f)) {
-            value |= (u8)KIN::Push3;
-        }
-        if((gamePadState.buttons & (cat::core::pad::ButtonMask::DPAD_DOWN | cat::core::pad::ButtonMask::A)) || (gamePadState.analogs[0].y < -0.3f)) {
-            value |= (u8)KIN::Push4;
-        }
+    switch(STB) {
+        case 0xD:
+            {
+                // ４方向使用するときの上下
+                if((gamePadState.buttons & (cat::core::pad::ButtonMask::DPAD_UP | cat::core::pad::ButtonMask::Y)) || (gamePadState.analogs[0].y > 0.3f)) {
+                    value |= (u8)KIN::Push3; // 0x02
+                }
+                if((gamePadState.buttons & (cat::core::pad::ButtonMask::DPAD_DOWN | cat::core::pad::ButtonMask::A)) || (gamePadState.analogs[0].y < -0.3f)) {
+                    value |= (u8)KIN::Push4; // 0x04
+                }
+                if((gamePadState.buttons & (cat::core::pad::ButtonMask::X | cat::core::pad::ButtonMask::Y))) {
+                    value |= (u8)0x40; // PUSH1、PUSH3
+                }
+                if((gamePadState.buttons & (cat::core::pad::ButtonMask::A | cat::core::pad::ButtonMask::B))) {
+                    value |= (u8)0x20; // PUSH2 PUSH4
+                }
+            }
+            break;
+        default:
+        case 0xE:
+            {
+                if(gamePadState.buttons & (cat::core::pad::ButtonMask::START | cat::core::pad::ButtonMask::RIGHT_THUMB)) {
+                    value |= (u8)KIN::GameStartKey; // 0x01
+                }
+                if(gamePadState.buttons & (cat::core::pad::ButtonMask::BACK | cat::core::pad::ButtonMask::LEFT_THUMB)) {
+                    value |= (u8)KIN::GameSelectKey; // 0x08
+                }
+                if((gamePadState.buttons & cat::core::pad::ButtonMask::DPAD_LEFT) || (gamePadState.analogs[0].x < -0.3f)) {
+                    value |= (u8)KIN::LeverSwitchLeft; // 0x02
+                }
+                if((gamePadState.buttons & cat::core::pad::ButtonMask::DPAD_RIGHT) || (gamePadState.analogs[0].x > 0.3f)) {
+                    value |= (u8)KIN::LeverSwitchRight; // 0x04
+                }
 
-        if((gamePadState.buttons & (cat::core::pad::ButtonMask::X | cat::core::pad::ButtonMask::Y))) {
-            value |= (u8)0x40; // PUSH1、PUSH3
-        }
-        if((gamePadState.buttons & (cat::core::pad::ButtonMask::A | cat::core::pad::ButtonMask::B))) {
-            value |= (u8)0x20; // PUSH2 PUSH4
-        }
-    } else /* if(STB == 0xE) */ {
-        // PUSH1、PUSH2
-        if(gamePadState.buttons & (cat::core::pad::ButtonMask::START | cat::core::pad::ButtonMask::RIGHT_THUMB)) {
-            value |= (u8)KIN::GameStartKey;
-        }
-        if(gamePadState.buttons & (cat::core::pad::ButtonMask::BACK | cat::core::pad::ButtonMask::LEFT_THUMB)) {
-            value |= (u8)KIN::GameSelectKey;
-        }
-        if((gamePadState.buttons & cat::core::pad::ButtonMask::DPAD_LEFT) || (gamePadState.analogs[0].x < -0.3f)) {
-            value |= (u8)KIN::LeverSwitchLeft;
-        }
-        if((gamePadState.buttons & cat::core::pad::ButtonMask::DPAD_RIGHT) || (gamePadState.analogs[0].x > 0.3f)) {
-            value |= (u8)KIN::LeverSwitchRight;
-        }
-        if(gamePadState.buttons & (cat::core::pad::ButtonMask::X | cat::core::pad::ButtonMask::Y)) {
-            value |= (u8)KIN::Push1;
-        }
-        if(gamePadState.buttons & (cat::core::pad::ButtonMask::A | cat::core::pad::ButtonMask::B)) {
-            value |= (u8)KIN::Push2;
-        }
+                // PUSH1、PUSH2、PUSH3、PUSH4
+                if(gamePadState.buttons & (cat::core::pad::ButtonMask::A | cat::core::pad::ButtonMask::B | cat::core::pad::ButtonMask::X | cat::core::pad::ButtonMask::Y)) {
+                    value |= (u8)KIN::Push2; // 0x20
+                }
+            }
+            break;
+        case 0x5:
+            {
+                u8 courseSwitch = 3;
+                switch(courseSwitch) {
+                    case 1: // コーススイッチ1
+                        value = (u8)0x01;
+                        break;
+                    case 2: // コーススイッチ2
+                        value = (u8)0x02;
+                        break;
+                    case 3: // コーススイッチ3
+                        value = (u8)0x04;
+                        break;
+                    case 4: // コーススイッチ4
+                        value = (u8)0x08;
+                        break;
+                    case 5: // コーススイッチ5
+                        value = (u8)0x10;
+                        break;
+                    default:
+                        value = 0;
+                        break;
+                }
+                // PUSH 1 or 3
+                // PUSH 2 or 4
+                if(gamePadState.buttons & cat::core::pad::ButtonMask::Y) {
+                    value |= (u8)0x40; // PUSH 3
+                }
+                if(gamePadState.buttons & cat::core::pad::ButtonMask::A) {
+                    value |= (u8)0x20; // PUSH 4
+                }
+
+                if(gamePadState.buttons & cat::core::pad::ButtonMask::X) {
+                    value |= (u8)0x40; // PUSH 1
+                }
+                if(gamePadState.buttons & cat::core::pad::ButtonMask::B) {
+                    value |= (u8)0x20; // PUSH 2
+                }
+            }
+            break;
+        case 0xA:
+            {
+                if(gamePadState.buttons & (cat::core::pad::ButtonMask::START | cat::core::pad::ButtonMask::RIGHT_THUMB)) {
+                    value |= (u8)KIN::GameStartKey; // 0x01
+                }
+                if(gamePadState.buttons & (cat::core::pad::ButtonMask::BACK | cat::core::pad::ButtonMask::LEFT_THUMB)) {
+                    value |= (u8)KIN::GameSelectKey; // 0x08
+                }
+
+                if((gamePadState.buttons & cat::core::pad::ButtonMask::DPAD_LEFT) || (gamePadState.analogs[0].x < -0.3f)) {
+                    value |= (u8)KIN::LeverSwitchLeft; // 0x02
+                }
+                if((gamePadState.buttons & cat::core::pad::ButtonMask::DPAD_RIGHT) || (gamePadState.analogs[0].x > 0.3f)) {
+                    value |= (u8)KIN::LeverSwitchRight; // 0x04
+                }
+            }
+            break;
+
+        case 0xC:
+            {
+                if(gamePadState.buttons & (cat::core::pad::ButtonMask::START | cat::core::pad::ButtonMask::RIGHT_THUMB)) {
+                    value |= (u8)KIN::GameStartKey; // 0x01
+                }
+                if(gamePadState.buttons & (cat::core::pad::ButtonMask::BACK | cat::core::pad::ButtonMask::LEFT_THUMB)) {
+                    value |= (u8)KIN::GameSelectKey; // 0x08
+                }
+                if((gamePadState.buttons & cat::core::pad::ButtonMask::DPAD_LEFT) || (gamePadState.analogs[0].x < -0.3f)) {
+                    value |= (u8)KIN::LeverSwitchLeft; // 0x02
+                }
+                if((gamePadState.buttons & cat::core::pad::ButtonMask::DPAD_RIGHT) || (gamePadState.analogs[0].x > 0.3f)) {
+                    value |= (u8)KIN::LeverSwitchRight; // 0x04
+                }
+
+                if(gamePadState.buttons & (cat::core::pad::ButtonMask::X | cat::core::pad::ButtonMask::Y)) {
+                    value |= (u8)KIN::Push1;
+                }
+                if(gamePadState.buttons & (cat::core::pad::ButtonMask::A | cat::core::pad::ButtonMask::B)) {
+                    value |= (u8)KIN::Push2;
+                }
+            }
+            break;
     }
     return value & 0x7F;
 }

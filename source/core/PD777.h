@@ -392,7 +392,7 @@ protected:
     /**
      * @brief パドルの値の範囲、上限値
      */
-    static constexpr u8 PAD_MAX_VALUE = 105;
+    static constexpr u8 PAD_MAX_VALUE = 125;
 
     /**
      * @brief PD1の入力を取得する

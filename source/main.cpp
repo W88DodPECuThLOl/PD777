@@ -9,32 +9,39 @@
 static_assert(false, "unsupported target");
 #endif // defined(_WIN32)
 
+namespace {
+
 LRESULT CALLBACK
-WindowProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
+WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
-    WinPD777* cpu = reinterpret_cast<WinPD777*>(GetWindowLongPtr(hwnd, GWLP_USERDATA));
     switch (uMsg) {
         case WM_DESTROY:
             PostQuitMessage(0);
             return 0;
         case WM_PAINT:
-            if(cpu) { cpu->onPaint(hwnd); }
+            if(WinPD777* cpu = reinterpret_cast<WinPD777*>(GetWindowLongPtr(hwnd, GWLP_USERDATA)); cpu) [[likely]] {
+                cpu->onPaint(hwnd);
+            }
             return 0;
     }
     return DefWindowProc( hwnd, uMsg, wParam, lParam );
 }
 
-void gameThreadEntry(uintptr_t param1, uintptr_t param2)
+void
+gameThreadEntry(uintptr_t param1, uintptr_t param2)
 {
-    SetThreadPriority( GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL );
+    SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
 
-    WinPD777* cpu = (WinPD777*)param1;
+    WinPD777* cpu = reinterpret_cast<WinPD777*>(param1);
     while(!cpu->isFinish()) {
         cpu->execute();
     }
 }
 
-int main()
+} // namespace
+
+int
+main()
 {
     CoInitializeEx(nullptr, COINIT_MULTITHREADED);
     auto hInstance = GetModuleHandle(0);
@@ -49,12 +56,12 @@ int main()
     std::thread gameThread(gameThreadEntry, reinterpret_cast<uintptr_t>(cpu.get()), reinterpret_cast<uintptr_t>(window->getWindowHandle()));
 
     MSG msg = {};
-    while (GetMessage(&msg, NULL, 0, 0) > 0) {
+    while(GetMessage(&msg, NULL, 0, 0) > 0) {
         TranslateMessage(&msg);
         DispatchMessage(&msg);
     }
 
     cpu->setFinish();
     gameThread.join();
-    return (int) msg.wParam;
+    return static_cast<int>(msg.wParam);
 }
