@@ -86,7 +86,7 @@ public:
         // CPU Clock                    1.431818 MHz ( = 3.579545 MHz / 2.5)
         // NTSC Horizontal Frequency    15.734   KHz
         // １ラインで実行出来るCPUの命令数 1431818 / 15734 = 91.00152535909495
-        if(++horizontalCounter >= DOT_WIDTH) [[unlikely]] {
+        if(++horizontalCounter >= 91) [[unlikely]] {
             horizontalCounter = 0;
 
             const auto prevVBLK = isVBLK();

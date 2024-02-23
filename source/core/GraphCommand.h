@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "catLowBasicTypes.h"
+#include "CRT.h"
 
 /**
  * @brief   スプライトをラスタライズしたときの１ライン分を描画するコマンド
@@ -21,7 +22,7 @@ struct GraphCommand {
      * @brief   描画する１ラインのY座標を取得する
      * @return  描画する1ラインのY座標
      */
-    inline const u16 getDrawLine() const { return (verticalCounter - 24) / 4; }
+    inline const u16 getDrawLine() const { return (verticalCounter - CRT::VERTICAL_BLANK_HEIGHT) / 4; }
 
     // ------------------------------------
     // スプライトの色々な値を取得する関数
@@ -65,12 +66,36 @@ struct GraphCommand {
         return (y - ySUB) & 0x7;
     }
 
+    /**
+     * @brief   スプライトの色を取得する
+     * @return  スプライトの色(PRIO:RGB)
+     */
     inline const u8 getSpriteColor() const {
         const auto PRIO = getSpritePrio();
         const auto data3 = spriteData[3];
         return ((data3 >> 1) & 7) | (PRIO << 3); // | forgroundColor; // prio rgb
     }
-    inline const u8 getSpriteBentType() const {
-        return (getSpritePattern() & 1) ? 1 : 0;
-    }
+
+    /**
+     * @brief   スプライトのベントタイプを取得する
+     * @return  スプライトのベントタイプ
+     */
+    inline const u8 getSpriteBentType() const { return (getSpritePattern() & 1) ? 1 : 0; }
+
+    /**
+     * @brief   スプライトパターンのサイズが8x7かどうか
+     * @return  サイズが8x7ならtrueを返す
+     */
+    inline const bool isSpritePatternSize8x7() const { return getSpritePattern() >= 0x70; }
+    /**
+     * @brief   スプライトパターンのサイズが7x7かどうか
+     * @return  サイズが7x7ならtrueを返す
+     */
+    inline const bool isSpritePatternSize7x7() const { return !isSpritePatternSize8x7(); }
+
+    /**
+     * @brief   スプライトがX方向リピートするかどうか
+     * @return  リピートするならtrueを返す
+     */
+    inline const bool isRepeatX() const { return isSpritePatternSize8x7(); }
 };

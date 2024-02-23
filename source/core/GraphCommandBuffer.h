@@ -2,6 +2,11 @@
 
 #include "catLowBasicTypes.h"
 #include "GraphCommand.h"
+#include "CRT.h"
+
+#if false // for debug
+#include <stdio.h>
+#endif
 
 /**
  * @brief １ドットの情報
@@ -82,47 +87,188 @@ struct DotInfo {
 
 class GraphLineCommandBuffer {
     /**
-     * @brief 描画コマンドのバッファサイズ
+     * @brief 描画コマンドのラインバッファサイズ
+     * 
+     * １ラインの最大スプライト表示可能数 12個
      */
-    static constexpr size_t BufferSize = 32; // MaxSprite per line
+    static constexpr size_t LineBufferMemorySize = 12;
 
+    /**
+     * @brief 描画コマンドのバッファ
+     */
+    GraphCommand buffer[LineBufferMemorySize];
+    /**
+     * @brief 書き込み位置。描画コマンドのコマンド数。
+     */
+    s32 currentIndex = 0;
 
+private:
+    /**
+     * @brief キャラクタパターンがベントかどうか
+     * 
+     * @param[in]   characterAttribute  キャラクタ属性
+     * @param[in]   characterNo         キャラクタパターン番号
+     * @return ベントするキャラクタパターンの場合trueを返す
+     */
     bool isBent(const u8* characterAttribute, const u8 characterNo) const {
         for(auto i = 0; i < 0x100; i += 2) {
             if(characterAttribute[i] >= 0x80) {
-                return false;
+                return false; // 検索終了
             }
 
             if(characterAttribute[i] == characterNo) {
-                if(characterAttribute[i + 1] & 0xC) {
+                if(characterAttribute[i + 1] & 0xC) [[likely]] {
                     return true;
                 }
             }
         }
         return false;
     }
-    bool isBent(const u8* characterAttribute, const GraphCommand* cmd) const {
-        if(cmd == nullptr) [[unlikely]] {
-            return false;
-        }
+
+    /**
+     * @brief グラフィックコマンドのキャラクタパターンがベントかどうか
+     * 
+     * @param[in]   characterAttribute  キャラクタ属性
+     * @param[in]   cmd                 グラフィックコマンド
+     * @return ベントする場合trueを返す
+     */
+    inline bool isBent(const u8* characterAttribute, const GraphCommand* cmd) const {
         return isBent(characterAttribute, cmd->getSpritePattern());
     }
-    u8 getBentType(const u8* characterAttribute, const GraphCommand* cmd) const {
-        if(cmd == nullptr) [[unlikely]] {
-            return 0;
+
+    /**
+     * @brief グラフィックコマンドで描画するスプライトとの当たり判定
+     * @param[in]   cmd         グラフィックコマンド
+     * @param[in]   patternRom  7x7のキャラクタパターン
+     * @param[in]   patternRom8 8x7のキャラクタパターン
+     * @param[in]   x           判定するX座標(0～90)
+     */
+    bool isHitDot(const GraphCommand* cmd, const u8* patternRom, const u8* patternRom8, const u8 x) const
+    {
+        // ------------------------------------
+        // パターン番号での判定
+        // ------------------------------------
+        const u16 sprPatten = cmd->getSpritePattern();   // パターン
+        if(((sprPatten & 0x0F) == 0x0F) || ((sprPatten & 0x0F) == 0x07)) [[unlikely]] {
+            return false; // パターンが0x?7と0x?Fのときは表示しない
         }
-        return cmd->getSpriteBentType();
+
+        // ------------------------------------
+        // スプライトのX座標の描画範囲での判定
+        // ------------------------------------
+        s32 startX; // スプライトのX座標の描画開始位置 [startX endX)
+        s32 endX;   // スプライトのX座標の描画終了位置
+        {
+            startX = cmd->getSpriteX();     // X座標
+            endX   = cmd->getSpriteX() + 7; // X座標
+            if(cmd->isRepeatX()) {
+                // 7x7との描画位置がずれているので補正
+                startX--;
+                // X方向リピートなので終了位置を変更
+                static const s32 repeatEnd[4] = {64+5, 72+5, 80+5, 91};
+                endX = repeatEnd[sprPatten & 0x3];
+            }
+        }
+        if((x < startX) || (endX <= x)) {
+            return false; // 範囲外
+        }
+
+        // ------------------------------------
+        // パターン内部での判定
+        // ------------------------------------
+        // パターンの読み込み位置を補正
+        const u32 Y = cmd->getDrawLine(); // 描画する1ラインのY座標(0～59)
+        auto patternRomAddressOffset = cmd->getSpritePatternRomAddressOffset(); // パターンROM読み出し時のオフセット
+        if(const u32 SprY  = cmd->getSpriteY(); SprY < Y) {
+            // 差をパターンのアドレスで吸収する
+            const u32 dY = Y - SprY;
+            patternRomAddressOffset = (patternRomAddressOffset + dY) % 7;
+        }
+        // パターンを調べる
+        bool hit;
+        if(cmd->isSpritePatternSize7x7()) {
+            // 7x7
+            const auto base = (sprPatten - (sprPatten / 8)) * 7;
+            const u8 pattern = patternRom[base + patternRomAddressOffset % 7];
+            const s32 patternRomOffsetX = (x - startX) % 7; // パターン内部での位置 0～6
+            const u8 mask = 0x40 >> patternRomOffsetX;
+            hit = (pattern & mask) != 0;
+        } else {
+            // 8x7
+            const auto base = (sprPatten - 0x70 - ((sprPatten - 0x70) / 8)) * 7;
+            const u8 pattern = patternRom8[base + patternRomAddressOffset % 7];
+            const s32 patternRomOffsetX = (x - startX) % 8; // パターン内部での位置 0～7
+            const u8 mask = 0x80 >> patternRomOffsetX;
+            hit = (pattern & mask) != 0;
+        }
+        return hit;
+    }
+
+    /**
+     * @brief シンプルなリングバッファ
+     */
+    template<s32 N>
+    class SimpleRingbuffer {
+        static constexpr s32 BufferSize = N;
+        const GraphCommand* buffer[BufferSize];
+        s32 writeIndex = 0;
+        s32 readIndex  = 0;
+        s32 elementSize = 0;
+    public:
+        void reset()
+        {
+            writeIndex = 0;
+            readIndex  = 0;
+            size = 0;
+        }
+        s32 size() const { return elementSize; }
+
+        void push(const GraphCommand* cmd)
+        {
+            buffer[writeIndex] = cmd;
+            writeIndex = (writeIndex + 1) % BufferSize;
+            if(elementSize < BufferSize) {
+                elementSize++;
+            } else {
+                readIndex = (readIndex + 1) % BufferSize;
+            }
+        }
+        const GraphCommand* peek(const s32 offset) const
+        {
+            return buffer[(readIndex + offset) % BufferSize];
+        }
+    };
+
+    /**
+     * @brief ドットバッファを取得する
+     * @param[out]  dotBuffer   ドットバッファ
+     * @param[in]   patternRom  7x7のキャラクタパターン
+     * @param[in]   patternRom8 8x7のキャラクタパターン
+     * @param[in]   prio        取得するプライオリティ(0か1)
+     * @param[in]   x           取得するX座標(0～90)
+     */
+    void getDotBuffer(SimpleRingbuffer<5>& dotBuffer, const u8* patternRom, const u8* patternRom8, const u8 prio, const u8 x) const {
+        if(prio == 0) {
+            // PRIO:0
+            for(decltype(currentIndex) index = 0; index < currentIndex; ++index) {
+                const auto* cmd = &buffer[index];
+                if(cmd->getSpritePrio()) { continue; }
+                if(isHitDot(cmd, patternRom, patternRom8, x)) [[unlikely]] {
+                    dotBuffer.push(cmd);
+                }
+            }
+        } else {
+            // PRIO:1
+            for(decltype(currentIndex) index = currentIndex - 1; index >= 0; --index) {
+                const auto* cmd = &buffer[index];
+                if(!cmd->getSpritePrio()) { continue; }
+                if(isHitDot(cmd, patternRom, patternRom8, x)) [[unlikely]] {
+                    dotBuffer.push(cmd);
+                }
+            }
+        }
     }
 public:
-    /**
-     * @brief 描画コマンドのバッファ
-     */
-    GraphCommand buffer[BufferSize];
-    /**
-     * @brief 書き込み位置。描画コマンドのコマンド数。
-     */
-    s32 currentIndex = 0;
-
     /**
      * @brief リセット
      */
@@ -141,8 +287,20 @@ public:
      */
     void addCommand(const u16 verticalCounter, const u8 spriteData0, const u8 spriteData1, const u8 spriteData2, const u8 spriteData3)
     {
-        if(currentIndex >= BufferSize) [[unlikely]] {
-            return; // 描画コマンドがオーバーした
+        if(currentIndex >= LineBufferMemorySize) [[unlikely]] {
+            // 描画コマンドがオーバーした
+            // return;
+            // 
+            // @todo 実験 最初のを消して追加する
+            // @todo リングバッファ化
+            for(auto i = 1; i < LineBufferMemorySize; ++i) { buffer[i - 1] = buffer[i]; }
+            // 最後に積む積む
+            buffer[LineBufferMemorySize - 1].verticalCounter = verticalCounter;
+            buffer[LineBufferMemorySize - 1].spriteData[0] = spriteData0;
+            buffer[LineBufferMemorySize - 1].spriteData[1] = spriteData1;
+            buffer[LineBufferMemorySize - 1].spriteData[2] = spriteData2;
+            buffer[LineBufferMemorySize - 1].spriteData[3] = spriteData3;
+            return;
         }
         buffer[currentIndex].verticalCounter = verticalCounter;
         buffer[currentIndex].spriteData[0] = spriteData0;
@@ -152,176 +310,73 @@ public:
         currentIndex++;
     }
 
-    bool isHitDot(const GraphCommand* cmd, const u8* patternRom, const u8* patternRom8, const u8 x) const
+    void getDotInfo(const u8* patternRom, const u8* patternRom8, const u8* characterAttribute, const u8 prio, const u8 x, DotInfo& dotInfo) const
     {
-        // ------------------------------------
-        // パターン番号での判定
-        // ------------------------------------
-        u16 sprPatten = cmd->getSpritePattern();   // パターン
-        if(((sprPatten & 0x0F) == 0x0F) || ((sprPatten & 0x0F) == 0x07)) [[unlikely]] {
-            return false; // パターンが0x?7と0x?Fのときは表示しない
-        }
+        // メモ）同一座標に5個までらしい
+        SimpleRingbuffer<5> dotBuffer;
+        getDotBuffer(dotBuffer, patternRom, patternRom8, prio, x);
 
-        // ------------------------------------
-        // スプライトのX座標の描画範囲での判定
-        // ------------------------------------
-        s32 startX; // スプライトのX座標の描画開始位置 [startX endX)
-        s32 endX;   // スプライトのX座標の描画終了位置
-        {
-            const bool repeatX = sprPatten >= 0x70;
-
-            startX = cmd->getSpriteX();     // X座標
-            endX   = cmd->getSpriteX() + 7; // X座標
-            if(sprPatten >= 0x70) {
-                startX--;
-            }
-            if(repeatX) {
-                // X方向リピートなので終了位置を変更
-                static const s32 repeatEnd[4] = {64+4, 72+4, 80+4, 88};
-                endX = repeatEnd[sprPatten & 0x3];
-            }
-        }
-        if(startX > x || x >= endX) {
-            return false; // 範囲外
-        }
-
-        // ------------------------------------
-        // パターン内部での判定
-        // ------------------------------------
-        // パターンの読み込み位置を補正
-        const u32 Y = cmd->getDrawLine(); // 描画する1ラインのY座標(0～59)
-        auto patternRomAddressOffset = cmd->getSpritePatternRomAddressOffset(); // パターンROM読み出し時のオフセット
-        if(const u32 SprY  = cmd->getSpriteY(); SprY < Y) {
-            // 差をパターンのアドレスで吸収する
-            u32 dY = Y - SprY;
-            patternRomAddressOffset = (patternRomAddressOffset + dY) % 7;
-        }
-        // パターンを調べる
-        bool hit;
-        if(sprPatten < 0x70) {
-            // 7x7
-            const auto base = (sprPatten - (sprPatten / 8)) * 7;
-            const u8 pattern = patternRom[base + patternRomAddressOffset % 7];
-            const s32 patternRomOffsetX = (x - startX) % 7; // パターン内部での位置 0～6
-            const u8 mask = 0x40 >> patternRomOffsetX;
-            hit = (pattern & mask) != 0;
-        } else {
-            // 8x7
-            const auto base = (sprPatten - 0x70 - ((sprPatten - 0x70) / 8)) * 7;
-            const u8 pattern = patternRom8[base + patternRomAddressOffset % 7];
-            const s32 patternRomOffsetX = (x - startX) % 8; // パターン内部での位置 0～7
-            const u8 mask = 0x80 >> patternRomOffsetX;
-            hit = (pattern & mask) != 0;
-        }
-        return hit;
-    }
-
-    bool getDotInfoPass1(const u8* patternRom, const u8* patternRom8, const u8* characterAttribute, const u8 x, DotInfo& dotInfo) const
-    {
-        const GraphCommand* hitCmd = nullptr;
-        for(s32 index = 0; index < currentIndex; ++index) {
-            const auto* cmd = &buffer[index];
-            const auto PRIO = cmd->getSpritePrio();
-            if(PRIO || !(cmd->getSpritePattern() >= 0x70)) {
-                continue;
-            }
-
-            // リピートあり PRIO:0
-            const bool hit     =           isHitDot(cmd, patternRom, patternRom8, x);
-            if(hit) {
-                hitCmd = cmd;
-            }
-        }
-        for(s32 index = 0; index < currentIndex; ++index) {
-            const auto* cmd = &buffer[index];
-            const auto PRIO = cmd->getSpritePrio();
-            if(PRIO || (cmd->getSpritePattern() >= 0x70)) {
-                continue;
-            }
-
-            // リピートなし PRIO:0
-            const bool hit     =           isHitDot(cmd, patternRom, patternRom8, x);
-            if(hit) {
-                hitCmd = cmd;
-            }
-        }
-        dotInfo.colorEnable = hitCmd != nullptr;
-        dotInfo.rgb         = hitCmd ? hitCmd->getSpriteColor() : 0;
-        return hitCmd != nullptr;
-    }
-    void getDotInfoPass2(const u8* patternRom, const u8* patternRom8, const u8* characterAttribute, const u8 x, DotInfo& dotInfo) const
-    {
+        // ベント情報
         dotInfo.bentRisingEdge  = 0;
         dotInfo.bentFallingEdge = 0;
-        dotInfo.bentEnable = false;
+        dotInfo.bentEnable      = false;
+        const GraphCommand* cmd = nullptr;
+        for(s32 index = 0; index < dotBuffer.size(); ++index) {
+            cmd = dotBuffer.peek(index);
+            if(isBent(characterAttribute, cmd)) {
+                dotInfo.bentEnable = true;
+                // ベントのエッジ
+                const bool prevHit = (x > CRT::HORIZONTAL_DOT_MIN) ? isHitDot(cmd, patternRom, patternRom8, x - 1) : false;
+                const bool nextHit = (x < CRT::HORIZONTAL_DOT_MAX) ? isHitDot(cmd, patternRom, patternRom8, x + 1) : false;
+                if(!prevHit) {
+                    dotInfo.bentRisingEdge |= (cmd->getSpriteBentType() == 0) ? 1 : 2;
+                }
+                if(!nextHit) {
+                    dotInfo.bentFallingEdge |= (cmd->getSpriteBentType() == 0) ? 1 : 2;
+                }
+            }
+        }
+        // 色情報
+        dotInfo.colorEnable = cmd != nullptr;
+        dotInfo.rgb         = cmd ? cmd->getSpriteColor() : 0;
+    }
 
-        const GraphCommand* hitCmd = nullptr;
+#if false // for DEBUG
+    void
+    dump(const u8* patternRom, const u8* patternRom8, const u8* characterAttribute)
+    {
         for(s32 index = 0; index < currentIndex; ++index) {
             const auto* cmd = &buffer[index];
-            const auto PRIO = cmd->getSpritePrio();
-            if(PRIO || (cmd->getSpritePattern() >= 0x70) || !isBent(characterAttribute, cmd)) {
-                continue;
-            }
-            // リピートなし PRIO:0 ベントあり
-            const bool prevHit = (x > CRT::HORIZONTAL_DOT_MIN) ? isHitDot(cmd, patternRom, patternRom8, x - 1) : false;
-            const bool hit     = isHitDot(cmd, patternRom, patternRom8, x);
-            const bool nextHit = (x < CRT::HORIZONTAL_DOT_MAX) ? isHitDot(cmd, patternRom, patternRom8, x + 1) : false;
+            const bool bent = isBent(characterAttribute, cmd);
 
-            if(!prevHit && hit) {
-                dotInfo.bentRisingEdge |= (getBentType(characterAttribute, cmd) == 0) ? 1 : 2;
+            printf("%2d:", index);
+            for(s32 x = 0; x < 91; ++x) {
+                const bool hit = isHitDot(cmd, patternRom, patternRom8, x);
+                if(hit) {
+                    printf("1%d,", cmd->getSpritePrio());
+                } else {
+                    printf("  ,");
+                }
             }
-            if(hit && !nextHit) {
-                dotInfo.bentFallingEdge |= (getBentType(characterAttribute, cmd) == 0) ? 1 : 2;
-            }
+            printf("\n");
 
-            if(hit) {
-                dotInfo.bentEnable  = dotInfo.bentEnable || true;
+            printf("%2x:", cmd->getSpritePattern());
+            for(s32 x = 0; x < 91; ++x) {
+                const bool hit = isHitDot(cmd, patternRom, patternRom8, x);
+                if(hit) {
+                    if(bent) {
+                        printf("%x%d,", cmd->getSpriteColor(), cmd->getSpriteBentType());
+                    } else {
+                        printf("%x ,", cmd->getSpriteColor());
+                    }
+                } else {
+                    printf("  ,");
+                }
             }
+            printf("\n");
         }
     }
-
-    bool getDotInfoPass3(const u8* patternRom, const u8* patternRom8, const u8* characterAttribute, const u8 x, DotInfo& dotInfo) const
-    {
-        dotInfo.bentRisingEdge  = 0;
-        dotInfo.bentFallingEdge = 0;
-        dotInfo.bentEnable = false;
-        const GraphCommand* hitCmd = nullptr;
-        for(s32 index = currentIndex - 1; index >= 0; --index) {
-            const auto* cmd = &buffer[index];
-            const auto PRIO = cmd->getSpritePrio();
-            if(!PRIO) {
-                continue;
-            }
-
-            // PRIO:1
-            const bool prevHit = (x > CRT::HORIZONTAL_DOT_MIN) ? isHitDot(cmd, patternRom, patternRom8, x - 1) : false;
-            const bool hit     = isHitDot(cmd, patternRom, patternRom8, x);
-            const bool nextHit = (x < CRT::HORIZONTAL_DOT_MAX) ? isHitDot(cmd, patternRom, patternRom8, x + 1) : false;
-
-            if(!prevHit && hit) {
-                if(isBent(characterAttribute, cmd)) {
-                    dotInfo.bentRisingEdge |= (getBentType(characterAttribute, cmd) == 0) ? 1 : 2;
-                }
-            }
-            if(hit && !nextHit) {
-                if(isBent(characterAttribute, cmd)) {
-                    dotInfo.bentFallingEdge |= (getBentType(characterAttribute, cmd) == 0) ? 1 : 2;
-                }
-            }
-
-            if(hit) {
-                if(isBent(characterAttribute, cmd)) {
-                    dotInfo.bentEnable  = dotInfo.bentEnable || true;
-                }
-            }
-            if(hit) {
-                hitCmd = cmd;
-            }
-        }
-        dotInfo.colorEnable = hitCmd != nullptr;
-        dotInfo.rgb         = hitCmd ? hitCmd->getSpriteColor() : 0;
-        return hitCmd != nullptr;
-    }
+#endif
 };
 
 /**
@@ -332,7 +387,7 @@ public:
     /**
      * @brief ラインサイズ
      */
-    static constexpr size_t LineSize = 60;
+    static constexpr size_t LineSize = CRT::DOT_HEIGHT;
 
     /**
      * @brief 描画コマンドのバッファ
@@ -357,10 +412,10 @@ public:
      */
     void addCommand(const u16 verticalCounter, const u8 spriteData0, const u8 spriteData1, const u8 spriteData2, const u8 spriteData3)
     {
-        if(verticalCounter < 24) [[unlikely]] {
+        if(verticalCounter < CRT::VERTICAL_BLANK_HEIGHT) [[unlikely]] {
             return; // VBLK期間中なので描画しない
         }
-        const s32 line = (verticalCounter - 24) / 4;
+        const s32 line = (verticalCounter - CRT::VERTICAL_BLANK_HEIGHT) / 4;
         if(line >= LineSize) [[unlikely]] {
             return; // バッファオーバー
         }

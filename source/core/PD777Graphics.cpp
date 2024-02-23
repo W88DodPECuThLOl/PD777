@@ -1,9 +1,4 @@
 ﻿#include "PD777.h"
-#include "PD777.h"
-
-#if defined(_WIN32)
-#include <string>
-#endif // defined(_WIN32)
 
 namespace {
 
@@ -253,6 +248,10 @@ PD777::dotRender(const DotInfo* dotInfos, const s32 line, const u32 bgColor)
         bentType &= ~dotInfos[x].bentFallingEdge;
     }
 #else
+    //
+    // 実験中...
+    //
+
     // @todo 色についての情報が不十分
     // メモ）ベント開始時にベントの色を決定すると、木の部分で全てのライン同一色となってしまう
     // 　　　実機では、途中で木の色に戻る。
@@ -365,43 +364,38 @@ PD777::makePresentImage()
     auto bgBlackPrio    = modeRegister & 0x08; // BLACK/PRIO
     auto bgRGB          = modeRegister & 0x07; // RGB
 
+#if false // for DEBUG
+    {
+        auto& lineBuffer = graphBuffer.lineBuffers[19];
+        lineBuffer.dump(patternRom, patternRom8, characterAttribute);
+    }
+#endif
+
     // -------------
     // 背景色
     // -------------
     const auto bgColor = tblBGtoRGB[bgRGB | bgBlackPrio /* | modeHUE | modeBrightness */]; // @todo パラメータの反映、色の調整
     for(auto& m : frameBuffer) { m = bgColor; }
 
-    // コマンドバッファの描画
-    // 
-    // メモ）パスと優先順位とスプライトの描画順番
-    //      低い                      スプライトの描画順番
-    // pass0 | リピートありでPRIO:0 | 0x00から0x18の順に描画   |
-    // pass1 | リピートなしでPRIO:0 | 0x00から0x18の順に描画   |
-    // pass2 |               PRIO:1 | 0x18から0x00の逆順で描画 |
-    //     高い
-
-    DotInfo dotInfos[CRT::DOT_WIDTH]; // 1ドットの情報
-    for(s32 line = 0; line < GraphCommandBuffer::LineSize; ++line) {
-        const auto& lineBuffer = graphBuffer.lineBuffers[line];
-
-        // Pass1,Pass2
-        for(s32 x = 0; x < CRT::DOT_WIDTH; ++x) {
-            // 色情報
-            lineBuffer.getDotInfoPass1(patternRom, patternRom8, characterAttribute, x, dotInfos[x]);
-            // ベント情報
-            lineBuffer.getDotInfoPass2(patternRom, patternRom8, characterAttribute, x, dotInfos[x]);
+    // -------------
+    // スプライト描画
+    // -------------
+    // メモ）優先順位とスプライトの描画順番
+    // 低い     スプライトの描画順番
+    // PRIO:0 | 0x00から0x18の順に描画   |
+    // PRIO:1 | 0x18から0x00の逆順で描画 |
+    // 高い
+    DotInfo dotInfos[CRT::DOT_WIDTH]; // １ライン分のドット情報
+    for(s32 drawLine = 0; drawLine < GraphCommandBuffer::LineSize; ++drawLine) {
+        const auto& lineBuffer = graphBuffer.lineBuffers[drawLine];
+        for(u8 prio = 0; prio < 2; ++prio) {
+            // ドットの情報を取得（色情報、ベント情報）
+            for(s32 x = 0; x < CRT::DOT_WIDTH; ++x) {
+                lineBuffer.getDotInfo(patternRom, patternRom8, characterAttribute, prio, x, dotInfos[x]);
+            }
+            // ドットの情報を元に描画
+            dotRender(dotInfos, drawLine, bgColor);
         }
-        // 描画
-        dotRender(dotInfos, line, bgColor);
-    
-        // Pass3
-        for(s32 x = 0; x < CRT::DOT_WIDTH; ++x) {
-            // 色情報
-            // ベント情報
-            lineBuffer.getDotInfoPass3(patternRom, patternRom8, characterAttribute, x, dotInfos[x]);
-        }
-        // 描画
-        dotRender(dotInfos, line, bgColor);
     }
     graphBuffer.reset();
 
@@ -417,11 +411,11 @@ PD777::makePresentImage()
     for(auto x = 1; x < frameBufferWidth / dotWidth; ++x) {
         for(auto y = 0; y < frameBufferHeight; ++y) {
             auto color = ((x & 3) == 0) ? 0xFFFFFF : 0x606060;
-            if(x == 16) { color = 0xFF0000; } // H.BLKの境界
+            if(x == CRT::HORIZONTAL_BLANK_END + 1) { color = 0xFF0000; } // H.BLKの境界
             //if(x == 64+5) { color = 0x0000FF; } // リピートXの境界
             //if(x == 72+5) { color = 0x0000FF; } // リピートXの境界
             //if(x == 80+5) { color = 0x0000FF; } // リピートXの境界
-            //if(x == 88)   { color = 0xFF0000; } // リピートXの境界
+            //if(x == 90)   { color = 0xFF0000; } // リピートXの境界
             frameBuffer[x * dotWidth + y * frameBufferWidth] = color;
         }
     }
