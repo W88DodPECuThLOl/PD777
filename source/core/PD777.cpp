@@ -1051,7 +1051,7 @@ PD777::execMoveA1toFLS(const u16 pc, const u16 code)
 //    print(pc, code, "A1=>FLS, 0x0=>L", u8"Move A1[7:1] to FLS[7:1], 0=>L[2:1]");
 
     const auto A1 = regs.getA1();
-    setFLS(A1);
+    sound.setFLS(A1);
     regs.setL(0);
 }
 
@@ -1061,7 +1061,7 @@ PD777::execMoveA1toFRS(const u16 pc, const u16 code)
 //    print(pc, code, "A1=>FRS, 0x1=>L", u8"Move A1[7:1] to FRS[7:1], 1=>L[2:1]");
 
     const auto A1 = regs.getA1();
-    setFRS(A1);
+    sound.setFRS(A1);
     regs.setL(1);
 }
 
@@ -1107,7 +1107,7 @@ PD777::execMoveA2toFLS(const u16 pc, const u16 code)
 //    print(pc, code, "A2=>FLS, 0x0=>L", u8"Move A2[7:1] to FLS[7:1], 0=>L[2:1]");
 
     const auto A2 = regs.getA2();
-    setFLS(A2);
+    sound.setFLS(A2);
     regs.setL(0);
 }
 
@@ -1117,7 +1117,7 @@ PD777::execMoveA2toFRS(const u16 pc, const u16 code)
 //    print(pc, code, "A2=>FRS, 0x1=>L", u8"Move A2[7:1] to FRS[7:1], 1=>L[2:1]");
 
     const auto A2 = regs.getA2();
-    setFRS(A2);
+    sound.setFRS(A2);
     regs.setL(1);
 }
 
@@ -1290,7 +1290,7 @@ PD777::execMoveMtoFLS(const u16 pc, const u16 code)
 
     // Move M[H[5:1],L[2:1]][7:1] to FLS[7:1], 0=>L[2:1]
     const auto value = readMemAtHL();
-    setFLS(value);
+    sound.setFLS(value);
     regs.setL(0);
 }
 
@@ -1301,7 +1301,7 @@ PD777::execMoveMtoFRS(const u16 pc, const u16 code)
 
     // Move M[H[5:1],L[2:1]][7:1] to FRS[7:1], 1=>L[2:1]
     const auto value = readMemAtHL();
-    setFRS(value);
+    sound.setFRS(value);
     regs.setL(1);
 }
 
@@ -2106,9 +2106,14 @@ void PD777::execute()
         regs.nextPC();
     }
 
-    const auto hblk = crt.is4H_BLK();
+    const auto hblk  = crt.isHBLK();
+    const auto hblk4 = crt.is4H_BLK();
     if(crt.step()) [[unlikely]] {
         // 新しいフレーム
+
+        // サウンドを定期的に更新しておく
+        setFLS(sound.getClockCounter(), sound.getFLS(), sound.getReverberatedSoundEffect());
+        setFRS(sound.getClockCounter(), sound.getFRS(), sound.getReverberatedSoundEffect());
 
         // 4HBLKでクリアされるらしい
         for(int i = 0; i <= 0x18; ++i) {
@@ -2121,12 +2126,8 @@ void PD777::execute()
         makePresentImage();
         // 作成したイメージを画面に出力する
         present();
-
-        // サウンドを定期的に更新しておく
-        updateFLS(sound.getClockCounter(), sound.getFLS());
-        updateFRS(sound.getClockCounter(), sound.getFRS());
     } else {
-        if(!hblk && crt.is4H_BLK()) {
+        if(!hblk4 && crt.is4H_BLK()) {
             // 4HBLKでクリアされるらしい
             for(int i = 0; i <= 0x18; ++i) {
                 const auto address = (i << 2) | 3;
@@ -2172,37 +2173,9 @@ PD777::setMode(const u8 mode)
 {
 //    printf("set Mode $%02X\n", mode);
 
-    const auto prevREV = regs.getREV();
     regs.setMode(mode);
-
     // REVをサウンドの方へ反映させる
-    const auto REV = regs.getREV();
-    sound.setReverberatedSoundEffect(REV);
-    if(!prevREV && REV) {
-        // メモ）
-        // REVが有効になったら、現在鳴っている音にも反映させる。
-        // そうしないと音がなりっぱなしになる
-        setFLS(sound.getFLS());
-        setFRS(sound.getFRS());
-    }
-}
-
-void
-PD777::setFLS(const u8 value)
-{
-    const auto REV = regs.getREV();
-    sound.setReverberatedSoundEffect(REV);
-    sound.setFLS(value);
-    setFLS(sound.getClockCounter(), value, REV);
-}
-
-void
-PD777::setFRS(const u8 value)
-{
-    const auto REV = regs.getREV();
-    sound.setReverberatedSoundEffect(REV);
-    sound.setFRS(value);
-    setFRS(sound.getClockCounter(), value, REV);
+    sound.setReverberatedSoundEffect(regs.getREV());
 }
 
 void

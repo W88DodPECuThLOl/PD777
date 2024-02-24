@@ -466,26 +466,10 @@ WinPD777::readKIN(const u8 STB)
 }
 
 void
-WinPD777::updateFLS(const s64 clockCounter, const u8 value)
-{
-    if(auto snd = getSound(clockCounter); snd) {
-        snd->updateFLS(clockCounter, value);
-    }
-}
-
-void
 WinPD777::setFLS(const s64 clockCounter, const u8 value, const bool reverberatedSoundEffect)
 {
     if(auto snd = getSound(clockCounter); snd) {
         snd->setFLS(clockCounter, value, reverberatedSoundEffect);
-    }
-}
-
-void
-WinPD777::updateFRS(const s64 clockCounter, const u8 value)
-{
-    if(auto snd = getSound(clockCounter); snd) {
-        snd->updateFRS(clockCounter, value);
     }
 }
 

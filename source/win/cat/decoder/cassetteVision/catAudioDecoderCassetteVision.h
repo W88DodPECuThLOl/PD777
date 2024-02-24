@@ -54,10 +54,14 @@ public:
 				if(!src.score.empty()) {
 					Score& s = src.score.front();
 					src.freq = convert(s.value);
-					if(s.noteOn) {
+
+					if(src.rev != s.rev) {
 						src.rev = s.rev;
-						src.revTime = 0;
-						src.revVolume = 1;
+						if(src.rev) {
+							// REV on
+							src.revTime = 0;
+							src.revVolume = 1;
+						}
 					}
 					if(s.counter-- <= 0) {
 						src.score.pop();
@@ -103,12 +107,6 @@ public:
 		 * @brief 残響効果が有効かどうか
 		 */
 		bool rev;
-		/**
-		 * @brief ノートオンで発生したものかどうか
-		 * @note  FLSレジスタ、FRSレジスタに書き込まれて発生したものならtrue。
-		 *        定期的な更新で発生したものならfalse。
-		 */
-		bool noteOn;
 	};
 	struct SourceInfo {
 		std::int64_t prevClockCounter = 0;
@@ -146,17 +144,18 @@ public:
 		source[1].prevClockCounter = clockCounter;
 	}
 
-	void setScore(const std::int64_t clockCounter, const std::uint8_t value, const std::int32_t index, bool noteOn, bool reverberatedSoundEffect = false)
+	void setScore(const std::int64_t clockCounter, const std::uint8_t value, const std::int32_t index, bool reverberatedSoundEffect = false)
 	{
 		auto& src = source[index];
 
 		Score s;
 		s.counter = (clockCounter - src.prevClockCounter) * CPUClock_period_s * getSamplesPerSec();
 		s.counter *= 0.98; // 少し早くしておく
-		if(s.counter <= 48000.0 * (1.0/60.0)) {
+		if((s.counter <= 48000.0 * (1.5/60.0))
+			|| (value <= 1) // 消音は無視しない
+		) {
 			s.value  = value;
 			s.rev    = reverberatedSoundEffect;
-			s.noteOn = noteOn;
 			src.mtxScore.lock();
 			if(src.score.size() < 128) {
 				src.score.push(s);
@@ -166,21 +165,13 @@ public:
 		src.prevClockCounter = clockCounter;
 	}
 
-	void updateFLS(const std::int64_t clockCounter, const std::uint8_t value)
-	{
-		setScore(clockCounter, value, 0, false);
-	}
 	void setFLS(const std::int64_t clockCounter, const std::uint8_t value, const bool reverberatedSoundEffect)
 	{
-		setScore(clockCounter, value, 0, true, reverberatedSoundEffect);
-	}
-	void updateFRS(const std::int64_t clockCounter, const std::uint8_t value)
-	{
-		setScore(clockCounter, value, 1, false);
+		setScore(clockCounter, value, 0, reverberatedSoundEffect);
 	}
 	void setFRS(const std::int64_t clockCounter, const std::uint8_t value, const bool reverberatedSoundEffect)
 	{
-		setScore(clockCounter, value, 1, true, reverberatedSoundEffect);
+		setScore(clockCounter, value, 1, reverberatedSoundEffect);
 	}
 };
 

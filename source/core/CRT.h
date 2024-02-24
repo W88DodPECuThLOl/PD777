@@ -118,7 +118,12 @@ public:
     bool is4H_BLK() const
     {
         return ((verticalCounter & 3) == 0)
-            && (horizontalCounter <= HORIZONTAL_BLANK_END);
+            && isHBLK();
+    }
+
+    bool isHBLK() const
+    {
+        return (horizontalCounter <= HORIZONTAL_BLANK_END);
     }
 
     /**
