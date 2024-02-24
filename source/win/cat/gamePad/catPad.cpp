@@ -47,7 +47,7 @@ void
 getPadState(s32 gamePadIndex, GamePadState* pGamePadState)
 {
 	XINPUT_STATE state;
-	if(SUCCEEDED(XInputGetState( gamePadIndex, &state ))) {
+	if(XInputGetState(gamePadIndex, &state) == ERROR_SUCCESS) {
 		// 接続されている
 
 		// デジタルボタン
