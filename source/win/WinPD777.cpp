@@ -301,6 +301,9 @@ WinPD777::readKIN(const u8 STB)
     s32 gamePadIndex = 0;
     cat::core::pad::GamePadState gamePadState;
     cat::core::pad::getPadState(gamePadIndex, &gamePadState);
+    if(!gamePadState.isControllerConnected()) {
+        return (u8)KIN::None; // コントローラが接続されていなかった
+    }
 
     // 
     // PUSH1 : X
