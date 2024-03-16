@@ -60,14 +60,17 @@ class Registers {
 
     /**
      * @brief   ラインバッファレジスタ(5bit)
-     * 
-     * 不明
      */
     u8 lineBufferRegister;
+
     /**
      * @brief   STBレジスタ(4bit)
      * 
-     * 不明
+     * メモ）
+     * ・キー入力のときに使用されるレジスタ
+     * ・負論理
+     * ・CPUのS1～S4に出力される
+     * ・S1～S4はカセット毎にA8～A12に結線されている
      */
     u8 STB;
 
@@ -95,6 +98,30 @@ class Registers {
      */
     u8 mode;
 public:
+    /**
+     * コンストラクタ
+     */
+    Registers()
+        : pc()
+        , skip()
+        , A1()
+        , A2()
+        , A3()
+        , A4()
+        , X4()
+        , L()
+        , H()
+        , L_()
+        , lineBufferRegister()
+        , STB()
+        , DISP()
+        , GPE()
+        , KIE()
+        , SME()
+        , mode()
+    {
+    }
+
     void setDISP(bool D) { DISP = D; }
     bool getDISP() const { return DISP; }
     void setGPE(bool G) { GPE = G; }
@@ -102,14 +129,7 @@ public:
     bool getKIE() const{ return KIE; }
     void setSME(bool S) { SME = S; }
     bool getSME() const { return SME; }
-    void setA11(bool flag)
-    {
-        if(flag) {
-            pc |= 0x400;
-        } else {
-            pc &= ~0x400;
-        }
-    }
+    void setA11(bool flag) { if(flag) { pc |= 0x400; } else { pc &= ~0x400; } }
     void setPC(const u16 address) { pc = address & 0xFFF; }
     u16 getPC() const { return pc & 0xFFF; }
     void nextPC() { setPC(nextPCAddress(getPC())); }
@@ -183,8 +203,8 @@ public:
         H = 0;
         L = 0;
         L_ = 0;
-        STB = 0;
         lineBufferRegister = 0;
+        STB = 0;
 
         DISP = false;
         GPE = false;

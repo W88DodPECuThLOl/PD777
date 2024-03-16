@@ -152,7 +152,7 @@ WinPD777::present()
     }
 
     // 時間調整
-    {
+    if(mTimeStart.QuadPart != 0) [[likely]] {
         LARGE_INTEGER mTimeFreq;
         QueryPerformanceFrequency(&mTimeFreq);
 
@@ -167,8 +167,11 @@ WinPD777::present()
             Sleep(sleepTime);
             timeEndPeriod(1);
         }
-        QueryPerformanceCounter(&mTimeStart);
     }
+    QueryPerformanceCounter(&mTimeStart);
+
+    // キー入力の更新
+    updateKey();
 }
 
 void
@@ -209,7 +212,7 @@ WinPD777::isPD1(u8& value)
     s32 gamePadIndex = 0;
     cat::core::pad::GamePadState gamePadState;
     cat::core::pad::getPadState(gamePadIndex, &gamePadState);
-    padValue[0] = clamp(padValue[0] - gamePadState.analogs[0].y * 0.03f, PAD_MIN_VALUE, PAD_MAX_VALUE);
+    padValue[0] = clamp(padValue[0] - gamePadState.analogs[0].y * 0.03f, KeyStatus::PAD_MIN_VALUE, KeyStatus::PAD_MAX_VALUE);
     value = (u8)((u8)padValue[0] & 0x7F);
     return true;
 }
@@ -220,7 +223,7 @@ WinPD777::isPD2(u8& value)
     s32 gamePadIndex = 0;
     cat::core::pad::GamePadState gamePadState;
     cat::core::pad::getPadState(gamePadIndex, &gamePadState);
-    padValue[1] = clamp(padValue[1] + gamePadState.analogs[0].x * 0.03f, PAD_MIN_VALUE, PAD_MAX_VALUE);
+    padValue[1] = clamp(padValue[1] + gamePadState.analogs[0].x * 0.03f, KeyStatus::PAD_MIN_VALUE, KeyStatus::PAD_MAX_VALUE);
     value = (u8)((u8)padValue[1] & 0x7F);
     return true;
 }
@@ -231,7 +234,7 @@ WinPD777::isPD3(u8& value)
     s32 gamePadIndex = 0;
     cat::core::pad::GamePadState gamePadState;
     cat::core::pad::getPadState(gamePadIndex, &gamePadState);
-    padValue[2] = clamp(padValue[2] + gamePadState.analogs[1].x * 0.03f, PAD_MIN_VALUE, PAD_MAX_VALUE);
+    padValue[2] = clamp(padValue[2] + gamePadState.analogs[1].x * 0.03f, KeyStatus::PAD_MIN_VALUE, KeyStatus::PAD_MAX_VALUE);
     value = (u8)((u8)padValue[2] & 0x7F);
     return true;
 }
@@ -242,7 +245,7 @@ WinPD777::isPD4(u8& value)
     s32 gamePadIndex = 0;
     cat::core::pad::GamePadState gamePadState;
     cat::core::pad::getPadState(gamePadIndex, &gamePadState);
-    padValue[3] = clamp(padValue[3] - gamePadState.analogs[1].y * 0.03f, PAD_MIN_VALUE, PAD_MAX_VALUE);
+    padValue[3] = clamp(padValue[3] - gamePadState.analogs[1].y * 0.03f, KeyStatus::PAD_MIN_VALUE, KeyStatus::PAD_MAX_VALUE);
     value = (u8)((u8)padValue[3] & 0x7F);
     return true;
 }
@@ -295,15 +298,52 @@ WinPD777::isGunPortLatch(u8& value)
     }
 }
 
-u8
-WinPD777::readKIN(const u8 STB)
+void
+WinPD777::readKIN(KeyStatus& key)
 {
+    key = keyStatus;
+}
+
+void
+WinPD777::updateKey()
+{
+    keyStatus.clear();
+
     s32 gamePadIndex = 0;
+    static cat::core::pad::GamePadButtonState prevButtons = 0;
     cat::core::pad::GamePadState gamePadState;
     cat::core::pad::getPadState(gamePadIndex, &gamePadState);
     if(!gamePadState.isControllerConnected()) {
-        return (u8)KIN::None; // コントローラが接続されていなかった
+        return; // コントローラが接続されていなかった
     }
+    const auto current     = gamePadState.buttons;
+    const auto edge        = current ^ prevButtons;
+    const auto risingEdge  = edge &  current;
+    const auto fallingEdge = edge & ~current;
+    prevButtons = current;
+
+    // メモ）コーススイッチをデジタルパッドの上下で切り替える
+    {
+        u8 courseSwitch = getCourseSwitch();
+        if(fallingEdge & cat::core::pad::ButtonMask::DPAD_UP) {
+            if(courseSwitch < 5) {
+                courseSwitch++;
+                setCourseSwitch(courseSwitch);
+            }
+        }
+        if(fallingEdge & cat::core::pad::ButtonMask::DPAD_DOWN) {
+            if(courseSwitch > 1) {
+                courseSwitch--;
+                setCourseSwitch(courseSwitch);
+            }
+        }
+    }
+/*
+    padValue[0] = clamp(padValue[0] - gamePadState.analogs[0].y * 0.03f, PAD_MIN_VALUE, PAD_MAX_VALUE);
+    padValue[1] = clamp(padValue[1] + gamePadState.analogs[0].x * 0.03f, PAD_MIN_VALUE, PAD_MAX_VALUE);
+    padValue[2] = clamp(padValue[2] + gamePadState.analogs[1].x * 0.03f, PAD_MIN_VALUE, PAD_MAX_VALUE);
+    padValue[3] = clamp(padValue[3] - gamePadState.analogs[1].y * 0.03f, PAD_MIN_VALUE, PAD_MAX_VALUE);
+*/
 
     // 
     // PUSH1 : X
@@ -312,160 +352,59 @@ WinPD777::readKIN(const u8 STB)
     // PUSH4 : A
     // 
 
-    u8 value = (u8)KIN::None;
-    switch(STB) {
-        case 0xD:
-            {
-                // ４方向使用するときの上下
-                if((gamePadState.buttons & (cat::core::pad::ButtonMask::DPAD_UP | cat::core::pad::ButtonMask::Y)) || (gamePadState.analogs[0].y > 0.3f)) {
-                    value |= (u8)KIN::Push3; // 0x02
-                }
-                if((gamePadState.buttons & (cat::core::pad::ButtonMask::DPAD_DOWN | cat::core::pad::ButtonMask::A)) || (gamePadState.analogs[0].y < -0.3f)) {
-                    value |= (u8)KIN::Push4; // 0x04
-                }
-                if((gamePadState.buttons & (cat::core::pad::ButtonMask::X | cat::core::pad::ButtonMask::Y))) {
-                    value |= (u8)0x40; // PUSH1、PUSH3
-                }
-                if((gamePadState.buttons & (cat::core::pad::ButtonMask::A | cat::core::pad::ButtonMask::B))) {
-                    value |= (u8)0x20; // PUSH2 PUSH4
-                }
-            }
-            break;
-        default:
-        case 0xE:
-            {
-                if(gamePadState.buttons & (cat::core::pad::ButtonMask::START | cat::core::pad::ButtonMask::RIGHT_THUMB)) {
-                    value |= (u8)KIN::GameStartKey; // 0x01
-                }
-                if(gamePadState.buttons & (cat::core::pad::ButtonMask::BACK | cat::core::pad::ButtonMask::LEFT_THUMB)) {
-                    value |= (u8)KIN::GameSelectKey; // 0x08
-                }
-                if((gamePadState.buttons & cat::core::pad::ButtonMask::DPAD_LEFT) || (gamePadState.analogs[0].x < -0.3f)) {
-                    value |= (u8)KIN::LeverSwitchLeft; // 0x02
-                }
-                if((gamePadState.buttons & cat::core::pad::ButtonMask::DPAD_RIGHT) || (gamePadState.analogs[0].x > 0.3f)) {
-                    value |= (u8)KIN::LeverSwitchRight; // 0x04
-                }
+    const bool start  = current & (cat::core::pad::ButtonMask::START | cat::core::pad::ButtonMask::RIGHT_THUMB);
+    const bool leverSwitch1Left = (current & cat::core::pad::ButtonMask::DPAD_LEFT) || (gamePadState.analogs[0].x < -0.3f);
+    const bool leverSwitch1Right = (current & cat::core::pad::ButtonMask::DPAD_RIGHT) || (gamePadState.analogs[0].x > 0.3f);
+    const bool select = current & (cat::core::pad::ButtonMask::BACK | cat::core::pad::ButtonMask::LEFT_THUMB);
+    const bool leverSwitch2Left = current & cat::core::pad::ButtonMask::LEFT_SHOULDER;
+    const bool leverSwitch2Right = current & cat::core::pad::ButtonMask::RIGHT_SHOULDER;
+    const bool push4 = current & cat::core::pad::ButtonMask::A;
+    const bool push3 = current & cat::core::pad::ButtonMask::Y;
+    const bool push2 = current & cat::core::pad::ButtonMask::B;
+    const bool push1 = current & cat::core::pad::ButtonMask::X;
 
-                // PUSH1、PUSH2、PUSH3、PUSH4
-                if(gamePadState.buttons & (cat::core::pad::ButtonMask::A | cat::core::pad::ButtonMask::B | cat::core::pad::ButtonMask::X | cat::core::pad::ButtonMask::Y)) {
-                    value |= (u8)KIN::Push2; // 0x20
-                }
+    // [A08]
+    if(start) { keyStatus.setGameStartKey(); }
+    if(leverSwitch1Left) { keyStatus.setLeverSwitch1Left(); }
+    if(leverSwitch1Right) { keyStatus.setLeverSwitch1Right(); }
+    if(select) { keyStatus.setGameSelectKey(); }
+    // [A09]
+    if(leverSwitch2Left) { keyStatus.setLeverSwitch2Left(); }
+    if(leverSwitch2Right) { keyStatus.setLeverSwitch2Right(); }
+    // [A10]
+    if(push4) { keyStatus.setPush4(); }
+    if(push3) { keyStatus.setPush3(); }
+    // [A11]
+    if(push2) { keyStatus.setPush2(); }
+    if(push1) { keyStatus.setPush1(); }
+    // [A12]
+    keyStatus.setCourseSwitch(getCourseSwitch());
 
-                // @todo FIX ME!!
-                if(getCassetteNumber() == 6) {
-                    // 特殊処理
-                    if(gamePadState.buttons & cat::core::pad::ButtonMask::X) {
-                        value |= (u8)KIN::LeverSwitchLeft;
-                    }
-                    if(gamePadState.buttons & cat::core::pad::ButtonMask::B) {
-                        value |= (u8)KIN::LeverSwitchRight;
-                    }
-                }
-            }
-            break;
-        case 0x5:
-            {
-                u8 courseSwitch = getCourseSwitch();
-                {
-                    // メモ）コーススイッチをデジタルパッドの上下で切り替えられるように
-                    static cat::core::pad::GamePadButtonState prevButtons = 0;
-                    auto fallingEdge = (gamePadState.buttons ^ prevButtons) & ~gamePadState.buttons;
-                    if(fallingEdge & cat::core::pad::ButtonMask::DPAD_UP) {
-                        if(courseSwitch < 5) {
-                            courseSwitch++;
-                            setCourseSwitch(courseSwitch);
-                        }
-                    }
-                    if(fallingEdge & cat::core::pad::ButtonMask::DPAD_DOWN) {
-                        if(courseSwitch > 1) {
-                            courseSwitch--;
-                            setCourseSwitch(courseSwitch);
-                        }
-                    }
-                    prevButtons = gamePadState.buttons;
-                }
+    //
+    // パドル
+    //
 
-                switch(courseSwitch) {
-                    case 1: // コーススイッチ1
-                        value = (u8)0x01;
-                        break;
-                    case 2: // コーススイッチ2
-                        value = (u8)0x02;
-                        break;
-                    case 3: // コーススイッチ3
-                        value = (u8)0x04;
-                        break;
-                    case 4: // コーススイッチ4
-                        value = (u8)0x08;
-                        break;
-                    case 5: // コーススイッチ5
-                        value = (u8)0x10;
-                        break;
-                    default:
-                        value = 0;
-                        break;
-                }
-                // PUSH 1 or 3
-                // PUSH 2 or 4
-                if(gamePadState.buttons & cat::core::pad::ButtonMask::Y) {
-                    value |= (u8)0x40; // PUSH 3
-                }
-                if(gamePadState.buttons & cat::core::pad::ButtonMask::A) {
-                    value |= (u8)0x20; // PUSH 4
-                }
+    keyStatus.setPD1((u8)padValue[0]);
+    keyStatus.setPD2((u8)padValue[1]);
+    keyStatus.setPD3((u8)padValue[2]);
+    keyStatus.setPD4((u8)padValue[3]);
 
-                if(gamePadState.buttons & cat::core::pad::ButtonMask::X) {
-                    value |= (u8)0x40; // PUSH 1
-                }
-                if(gamePadState.buttons & cat::core::pad::ButtonMask::B) {
-                    value |= (u8)0x20; // PUSH 2
-                }
-            }
-            break;
-        case 0xA:
-            {
-                if(gamePadState.buttons & (cat::core::pad::ButtonMask::START | cat::core::pad::ButtonMask::RIGHT_THUMB)) {
-                    value |= (u8)KIN::GameStartKey; // 0x01
-                }
-                if(gamePadState.buttons & (cat::core::pad::ButtonMask::BACK | cat::core::pad::ButtonMask::LEFT_THUMB)) {
-                    value |= (u8)KIN::GameSelectKey; // 0x08
-                }
+    //
+    // 特殊
+    //
 
-                if((gamePadState.buttons & cat::core::pad::ButtonMask::DPAD_LEFT) || (gamePadState.analogs[0].x < -0.3f)) {
-                    value |= (u8)KIN::LeverSwitchLeft; // 0x02
-                }
-                if((gamePadState.buttons & cat::core::pad::ButtonMask::DPAD_RIGHT) || (gamePadState.analogs[0].x > 0.3f)) {
-                    value |= (u8)KIN::LeverSwitchRight; // 0x04
-                }
-            }
-            break;
-
-        case 0xC:
-            {
-                if(gamePadState.buttons & (cat::core::pad::ButtonMask::START | cat::core::pad::ButtonMask::RIGHT_THUMB)) {
-                    value |= (u8)KIN::GameStartKey; // 0x01
-                }
-                if(gamePadState.buttons & (cat::core::pad::ButtonMask::BACK | cat::core::pad::ButtonMask::LEFT_THUMB)) {
-                    value |= (u8)KIN::GameSelectKey; // 0x08
-                }
-                if((gamePadState.buttons & cat::core::pad::ButtonMask::DPAD_LEFT) || (gamePadState.analogs[0].x < -0.3f)) {
-                    value |= (u8)KIN::LeverSwitchLeft; // 0x02
-                }
-                if((gamePadState.buttons & cat::core::pad::ButtonMask::DPAD_RIGHT) || (gamePadState.analogs[0].x > 0.3f)) {
-                    value |= (u8)KIN::LeverSwitchRight; // 0x04
-                }
-
-                if(gamePadState.buttons & (cat::core::pad::ButtonMask::X | cat::core::pad::ButtonMask::Y)) {
-                    value |= (u8)KIN::Push1;
-                }
-                if(gamePadState.buttons & (cat::core::pad::ButtonMask::A | cat::core::pad::ButtonMask::B)) {
-                    value |= (u8)KIN::Push2;
-                }
-            }
-            break;
+    // ４方向使用するときの上
+    if((current & cat::core::pad::ButtonMask::DPAD_UP) || (gamePadState.analogs[0].y > 0.3f)) {
+        keyStatus.setUp();
     }
-    return value & 0x7F;
+    // ４方向使用するときの下
+    if((current & cat::core::pad::ButtonMask::DPAD_DOWN) || (gamePadState.analogs[0].y < -0.3f)) {
+        keyStatus.setDown();
+    }
+    // デバッグモード
+    if(false) {
+        keyStatus.setDebugMode();
+    }
 }
 
 void
@@ -484,14 +423,34 @@ WinPD777::setFRS(const s64 clockCounter, const u8 value, const bool reverberated
     }
 }
 
-WinPD777::WinPD777(HWND hwnd)
+WinPD777::WinPD777()
     : PD777()
     , image(new WinImage())
 {
-    image->make(hwnd);
+    PD777::init();
+}
 
+bool
+WinPD777::setup(const std::optional<std::vector<u8>>& codeData, const std::optional<std::vector<u8>>& cgData)
+{
+    if(codeData && !setupRom(codeData.value().data(), codeData.value().size())) {
+        return false; // 設定に失敗した
+    }
+    if(cgData && !setupCGRom(cgData.value().data(), cgData.value().size())) {
+        return false; // 設定に失敗した
+    }
+    return true;
+}
+
+bool
+WinPD777::targetDependentSetup(HWND hwnd)
+{
+    image->make(hwnd);
     // 開始時間の初期化
-    QueryPerformanceCounter(&mTimeStart);
+    mTimeStart.QuadPart = 0;
+    // サウンド初期化
+    getSound(0);
+    return true;
 }
 
 void

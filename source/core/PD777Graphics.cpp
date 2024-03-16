@@ -391,7 +391,7 @@ PD777::makePresentImage()
         for(u8 prio = 0; prio < 2; ++prio) {
             // ドットの情報を取得（色情報、ベント情報）
             for(s32 x = 0; x < CRT::DOT_WIDTH; ++x) {
-                lineBuffer.getDotInfo(patternRom, patternRom8, characterAttribute, prio, x, dotInfos[x]);
+                lineBuffer.getDotInfo(patternCGRom7x7, patternCGRom8x7, characterBent, prio, x, dotInfos[x]);
             }
             // ドットの情報を元に描画
             dotRender(dotInfos, drawLine, bgColor);
@@ -412,9 +412,9 @@ PD777::makePresentImage()
         for(auto y = 0; y < frameBufferHeight; ++y) {
             auto color = ((x & 3) == 0) ? 0xFFFFFF : 0x606060;
             if(x == CRT::HORIZONTAL_BLANK_END + 1) { color = 0xFF0000; } // H.BLKの境界
-            //if(x == 64+5) { color = 0x0000FF; } // リピートXの境界
-            //if(x == 72+5) { color = 0x0000FF; } // リピートXの境界
-            //if(x == 80+5) { color = 0x0000FF; } // リピートXの境界
+            if(x == 64+5) { color = 0x0000FF; } // リピートXの境界
+            if(x == 72+5) { color = 0x0000FF; } // リピートXの境界
+            if(x == 80+5) { color = 0x0000FF; } // リピートXの境界
             //if(x == 90)   { color = 0xFF0000; } // リピートXの境界
             frameBuffer[x * dotWidth + y * frameBufferWidth] = color;
         }

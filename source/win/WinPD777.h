@@ -3,10 +3,18 @@
 #include "../core/PD777.h"
 #include "../core/catLowBasicTypes.h"
 #include <Windows.h>
+#include <vector>
+#include <optional>
 
 class WinPD777 : public PD777 {
     class WinImage* image;
     bool finished = false;
+
+    /**
+     * @brief キー入力の状態
+     */
+    KeyStatus keyStatus;
+
     /**
      * @brief パドル1～パドル4の値
      */
@@ -83,8 +91,13 @@ class WinPD777 : public PD777 {
      * @return コーススイッチ（1～5）
      */
     u8 getCourseSwitch() const { return courseSwitch; }
+    void updateKey();
 public:
-    WinPD777(HWND hwnd);
+    WinPD777();
+
+    bool setup(const std::optional<std::vector<u8>>& codeData, const std::optional<std::vector<u8>>& cgData);
+    bool targetDependentSetup(HWND hwnd);
+
     void onPaint(HWND hwnd);
     bool isFinish() const { return finished; }
     void setFinish() { finished = true; }
@@ -105,7 +118,7 @@ protected:
     virtual bool isPD3(u8& value) override;
     virtual bool isPD4(u8& value) override;
     virtual bool isGunPortLatch(u8& value) override;
-    virtual u8 readKIN(const u8 STB) override;
+    virtual void readKIN(KeyStatus& key) override;
 public:
     virtual void registerDump() override;
 };

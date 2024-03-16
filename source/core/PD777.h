@@ -10,6 +10,7 @@
 #include "Sound.h"
 #include "GraphCommand.h"
 #include "GraphCommandBuffer.h"
+#include "KeyStatus.h"
 
 /**
  * @brief   μPD777
@@ -53,8 +54,11 @@ protected:
      */
     static const u8 characterAttribute[0x80*2];
 
-    u16 rom[0x800];
-    u8  ram[0x80];
+    u16 rom[0x800] {};
+    u8 patternCGRom7x7[686] {};
+    u8 patternCGRom8x7[98] {};
+    u8 characterBent[0x80*2] {};
+    u8  ram[0x80] {};
     CRT crt;
     Registers regs;
     Stack stack;
@@ -74,12 +78,8 @@ protected:
 #endif // defined(_WIN32)
 
     u32 cassetteNumber = 0;
+    KeyMapping keyMapping;
 private:
-    /**
-     * @brief   romをセットアップする
-     */
-    void setupRom();
-
     /**
      * @brief ドットの形状
      */
@@ -364,42 +364,33 @@ protected:
     // input
 
     /**
-     * @brief パドルの値の範囲、下限値
-     */
-    static constexpr u8 PAD_MIN_VALUE = 0;
-    /**
-     * @brief パドルの値の範囲、上限値
-     */
-    static constexpr u8 PAD_MAX_VALUE = 125;
-
-    /**
      * @brief PD1の入力を取得する
      * 
      * @param[out]  value   パドルの値(PAD_MIN_VALUE～PAD_MAX_VALUE)
      * @return 入力されていたらtrueを返す
      */
-    virtual bool isPD1(u8& value) { value = PAD_MIN_VALUE; return false; }
+    virtual bool isPD1(u8& value) { value = KeyStatus::PAD_MIN_VALUE; return false; }
     /**
      * @brief PD2の入力を取得する
      * 
      * @param[out]  value   パドルの値(PAD_MIN_VALUE～PAD_MAX_VALUE)
      * @return 入力されていたらtrueを返す
      */
-    virtual bool isPD2(u8& value) { value = PAD_MIN_VALUE; return false; }
+    virtual bool isPD2(u8& value) { value = KeyStatus::PAD_MIN_VALUE; return false; }
     /**
      * @brief PD3の入力を取得する
      * 
      * @param[out]  value   パドルの値(PAD_MIN_VALUE～PAD_MAX_VALUE)
      * @return 入力されていたらtrueを返す
      */
-    virtual bool isPD3(u8& value) { value = PAD_MIN_VALUE; return false; }
+    virtual bool isPD3(u8& value) { value = KeyStatus::PAD_MIN_VALUE; return false; }
     /**
      * @brief PD4の入力を取得する
      * 
      * @param[out]  value   パドルの値(PAD_MIN_VALUE～PAD_MAX_VALUE)
      * @return 入力されていたらtrueを返す
      */
-    virtual bool isPD4(u8& value) { value = PAD_MIN_VALUE; return false; }
+    virtual bool isPD4(u8& value) { value = KeyStatus::PAD_MIN_VALUE; return false; }
 
     /**
      * @brief 光線銃の入力
@@ -417,57 +408,19 @@ protected:
     virtual bool isGunPortLatch(u8& value) { value = 0; return false; }
 
     /**
-     * @brief KINの値
+     * @brief キー入力状態を読み込む
+     * @param[out]   key    キー入力状態
      */
-    enum class KIN : u8 {
-        None = 0x00,
-
-        /**
-         * @brief	ゲームスタートキー
-         */
-        GameStartKey     = 0x01,
-        /**
-         * @brief	ゲームセレクトキー
-         */
-        GameSelectKey    = 0x08,
-        /**
-         * @brief	ゲーム操作キー（レバースイッチ）の左
-         */
-        LeverSwitchLeft  = 0x02,
-        /**
-         * @brief	ゲーム操作キー（レバースイッチ）の右
-         */
-        LeverSwitchRight = 0x04,
-
-        /**
-         * @brief	ゲーム操作キー（アクションキー）のPUSH 1
-         */
-        Push1            = 0x40,
-        /**
-         * @brief	ゲーム操作キー（アクションキー）のPUSH 2
-         */
-        Push2            = 0x20,
-
-        /**
-         * @brief	ゲーム操作キー（アクションキー）のPUSH 3
-         * @note STBが0x0Dの時
-         */
-        Push3            = 0x2,
-
-        /**
-         * @brief	ゲーム操作キー（アクションキー）のPUSH 4
-         * @note STBが0x0Dの時
-         */
-        Push4            = 0x4,
-    };
+    virtual void readKIN(KeyStatus& key) { key.clear(); }
     /**
-     * @brief キーの入力
+     * @brief キー状態入力をKINの値に変換する
      * 
-     * @param[in]   STB     不明
-     * @return  押下されているキーの論理和
-     * @see     enum KIN
+     * @param[in]   key キー入力状態
+     * @param[in]   STB キー入力をスキャンするときの値
+     * @return  KINの値
      */
-    virtual u8 readKIN(const u8 STB) { return 0; }
+    virtual u8 convertKeyInput(const KeyStatus& key, const u8 STB) const { return key.convert(STB, keyMapping, getCassetteNumber()); }
+
     /**
      * @brief 不明。水平カウンタの取得？
      * @return 不明
@@ -488,12 +441,29 @@ public:
     /**
      * @brief 初期化
      */
-    void init();
+    virtual void init();
+
+    /**
+     * @brief   romをセットアップする
+     * 
+     * @param[in]   data        データ
+     * @param[in]   dataSize    データサイズ(バイト単位)
+     * @return  成功したらtrueを返す
+     */
+    bool setupRom(const void* data = nullptr, size_t dataSize = 0);
+    /**
+     * @brief   cgromをセットアップする
+     * 
+     * @param[in]   data        データ
+     * @param[in]   dataSize    データサイズ(バイト単位)
+     * @return  成功したらtrueを返す
+     */
+    bool setupCGRom(const void* data = nullptr, size_t dataSize = 0);
 
     /**
      * @brief 終了処理
      */
-    void term();
+    virtual void term();
 
     /**
      * @brief １命令実行する

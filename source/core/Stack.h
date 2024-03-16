@@ -7,18 +7,23 @@
  */
 class Stack {
     /**
+     * @brief スタックサイズ
+     */
+    static constexpr u8 STACK_SIZE = 3;
+
+    /**
      * @brief   コールスタックのアドレス
      */
-    u16  stack[3];
+    u16  stack[STACK_SIZE] {};
     /**
-     * @brief   スタックポインタ
+     * @brief   スタックポインタ(0～)
      */
     u8   stackPointer;
 public:
     /**
      * @brief   コンストラクタ
      */
-    Stack() = default;
+    Stack();
     /**
      * @brief   デストラクタ
      */
