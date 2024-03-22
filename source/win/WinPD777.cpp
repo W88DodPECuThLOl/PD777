@@ -194,15 +194,16 @@ WinPD777::registerDump()
     }
 
     // レジスタ
-    const auto H = regs.getH();
-    const auto L = regs.getL();
-    const auto A1 = regs.getA1();
-    const auto A2 = regs.getA2();
-    const auto A3 = regs.getA3();
-    const auto A4 = regs.getA4();
-    const auto M  = readMemAtHL();
-    const auto STB  = regs.getSTB();
-    std::printf("HL:%02X:%X M:%02X STB:%X \x1b[K\n", H, L, M, STB);
+    const auto H   = regs.getH();
+    const auto L   = regs.getL();
+    const auto A1  = regs.getA1();
+    const auto A2  = regs.getA2();
+    const auto A3  = regs.getA3();
+    const auto A4  = regs.getA4();
+    const auto M   = readMemAtHL();
+    const auto STB = regs.getSTB();
+    const auto SP  = stack.getStackPointer();
+    std::printf("HL:%02X:%X M:%02X STB:%X SP:%d\x1b[K\n", H, L, M, STB, SP);
     std::printf("A1:%02X A2:%02X A3:%02X A4:%02X \x1b[K\n", A1, A2, A3, A4);
 }
 

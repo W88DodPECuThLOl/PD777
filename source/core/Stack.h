@@ -14,9 +14,9 @@ class Stack {
     /**
      * @brief   コールスタックのアドレス
      */
-    u16  stack[STACK_SIZE] {};
+    u16  stack[STACK_SIZE*2] {};
     /**
-     * @brief   スタックポインタ(0～)
+     * @brief   スタックポインタ(0～STACK_SIZE-1)
      */
     u8   stackPointer;
 public:
@@ -34,7 +34,7 @@ public:
      * 
      * コールスタックを初期化する
      */
-    void reset();
+    void reset() noexcept;
 
     /**
      * @brief   コールスタックに戻るアドレスを積む
@@ -47,4 +47,10 @@ public:
      * @return  戻るアドレス
      */
     const u16 stackPop();
+
+    /**
+     * @brief   スタックポインタを取得する
+     * @return  スタックポインタ(0～STACK_SIZE-1)
+     */
+    const u8 getStackPointer() const noexcept;
 };

@@ -2070,17 +2070,35 @@ PD777::setupRom(const void* data, size_t dataSize)
         {
             // マジックナンバー + バージョン
             const u8* header = (const u8*)data;
-            c8 magicNumber[] = u8"_CassetteVision_0000";
-            for(auto i = 0; i < 20; ++i) {
+            c8 magicNumber[] = u8"_CassetteVision_000";
+            for(auto i = 0; i < 19; ++i) {
                 if(header[i] != magicNumber[i]) return false;
             }
-            // キーマッピング
-            const u8* keyMapping = header + 0x18;
-            for(auto i = 0; i < 5; ++i) {
-                this->keyMapping.keyMap[i] = keyMapping[i];
+            if(header[19] == '0') {
+                // Ver0
+                // キーマッピング
+                const u8* keyMapping = header + 0x18;
+                for(auto i = 0; i < 5; ++i) {
+                    this->keyMapping.keyMap[i] = keyMapping[i];
+                }
+                // タイトル
+                const c8* title = (const c8*)header + 0x20;
+            } else if(header[19] == '1') {
+                // Ver1
+                // キーマッピング
+                const u8* keyMappingA = header + 0x18;
+                for(auto i = 0; i < 5; ++i) {
+                    this->keyMapping.keyMap[i] = keyMappingA[i];
+                }
+                const u8* keyMappingB = header + 0x20;
+                for(auto i = 0; i < 7; ++i) {
+                    this->keyMapping.bitMap[i] = keyMappingB[i];
+                }
+                // タイトル
+                const c8* title = (const c8*)header + 0x28;
+            } else {
+                return false; // 不明なバージョン
             }
-            // タイトル
-            const c8* title = (const c8*)header + 0x20;
         }
         // コード部分
         {

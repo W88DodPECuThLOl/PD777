@@ -6,7 +6,7 @@ Stack::Stack()
 }
 
 void
-Stack::reset()
+Stack::reset() noexcept
 {
     stackPointer = 0;
     for(auto& s : stack) { s = 0; }
@@ -15,7 +15,7 @@ Stack::reset()
 void
 Stack::stackPush(const u16 address)
 {
-    if(stackPointer >= STACK_SIZE) [[unlikely]] {
+    if(stackPointer >= sizeof(stack)/sizeof(stack[0])) [[unlikely]] {
         return; // スタックオーバー
     }
     stack[stackPointer++] = address;
@@ -28,4 +28,10 @@ Stack::stackPop()
         return 0;   // スタックアンダー
     }
     return stack[--stackPointer];
+}
+
+const u8
+Stack::getStackPointer() const noexcept
+{
+    return stackPointer;
 }
