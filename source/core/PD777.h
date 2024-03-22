@@ -79,6 +79,9 @@ protected:
 
     u32 cassetteNumber = 0;
     KeyMapping keyMapping;
+
+    // VBLK命令呼び出されたフラグ
+    bool calledVBLK = false;
 private:
     /**
      * @brief ドットの形状

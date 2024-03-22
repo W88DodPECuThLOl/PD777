@@ -359,6 +359,8 @@ public:
         currentIndex = 0; // 書き込み位置をリセット
     }
 
+    const bool empty() const { return currentIndex == 0; }
+
     /**
      * @brief   描画コマンドを追加する
      * @param[in]   verticalCounter 垂直カウンタ
@@ -507,5 +509,14 @@ public:
             return; // バッファオーバー
         }
         lineBuffers[line].addCommand(verticalCounter, spriteData0, spriteData1, spriteData2, spriteData3);
+    }
+    
+    bool empty() const {
+        for(const auto& lineBuffer : lineBuffers) {
+            if(!lineBuffer.empty()) {
+                return false;
+            }
+        }
+        return true;
     }
 };

@@ -105,6 +105,8 @@ PD777::execVBLK(const u16 pc, const u16 code)
         regs.setSkip();
     }
 
+    calledVBLK = true;  // VBLK命令呼び出されたフラグを立てる
+
     for(int i = 0; i <= 0x18; ++i) {
         const auto address = (i << 2) | 3;
         const auto value = readMem(address);
@@ -2297,6 +2299,7 @@ PD777::init()
     stack.reset();
     regs.reset();
     sound.reset();
+    calledVBLK = false;
 }
 
 void
@@ -2339,8 +2342,27 @@ void PD777::execute()
             writeMem(address, value & ~1);
         }
 
+#if false
         // イメージ作成
         makePresentImage();
+#else
+        // フリッカー対策
+        // VBLANK待ちを呼び出す前に、VBLANKが来た場合は、処理が間に合っていない
+        if(calledVBLK) {
+            calledVBLK = false;
+            if(!graphBuffer.empty()) {
+                // イメージ作成
+                makePresentImage();
+            } else {
+                // コマンドバッファだけリセットする
+                graphBuffer.reset();
+            }
+        } else {
+            // コマンドバッファだけリセットする
+            graphBuffer.reset();
+        }
+#endif
+
         // 作成したイメージを画面に出力する
         present();
     } else {
