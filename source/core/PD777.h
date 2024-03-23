@@ -83,6 +83,12 @@ protected:
     // VBLK命令呼び出されたフラグ
     bool calledVBLK = false;
 private:
+    bool setupRomRawAddress(const void* data, size_t dataSize);
+    bool setupRomRawOrder(const void* data, size_t dataSize);
+    bool setupRomFormatted(const void* data, size_t dataSize);
+    bool setupCGRomRawBitStream(const void* data, size_t dataSize);
+    bool setupCGRomFormatted(const void* data, size_t dataSize);
+private:
     /**
      * @brief ドットの形状
      */
