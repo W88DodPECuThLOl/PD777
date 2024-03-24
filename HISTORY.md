@@ -1,5 +1,10 @@
 # 更新履歴
 
+## verX.XX.XX
+
+コア
+* 「VIDEO GAME TEST DISPLAY」をデフォルトに
+
 ## ver0.03.24
 
 コア
