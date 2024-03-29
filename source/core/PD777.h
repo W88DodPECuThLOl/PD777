@@ -349,11 +349,13 @@ protected:
      * @brief Lチャンネルのサウンドの音程を設定する
      * 
      * やんわりメモ）
-     * ・FLSに書き込みがされた時に呼び出される
-     * ・MIDIでいうところのNoteOnみたいな感じ
-     * ・音を出しっぱなしで、MODEレジスタのREV機能（残響音効果）でかっこよく消音させてるっぽい？
+     * - FLSに書き込みがされた時に呼び出される
+     * - MIDIでいうところのNoteOnみたいな感じ
+     * - 音を出しっぱなしで、MODEレジスタのREV機能（残響音効果）でかっこよく消音させてるっぽい？
      * 
-     * @param[in]   value                   音程。1は無音
+     * @param[in]   clockCounter    CPUのクロックカウンタ
+     * @param[in]   value           音程(1～127)
+     *                              @arg 1: 無音
      * @param[in]   reverberatedSoundEffect 残響音効果が有効かどうか
      */
     virtual void setFLS(const s64 clockCounter, const u8 value, const bool reverberatedSoundEffect) {}
@@ -361,11 +363,13 @@ protected:
      * @brief Rチャンネルのサウンドの音程を設定する
      * 
      * やんわりメモ）
-     * ・FRSに書き込みがされた時に呼び出される
-     * ・MIDIでいうところのNoteOnみたいな感じ
-     * ・音を出しっぱなしで、MODEレジスタのREV機能（残響音効果）でかっこよく消音させてるっぽい？
+     * - FRSに書き込みがされた時に呼び出される
+     * - MIDIでいうところのNoteOnみたいな感じ
+     * - 音を出しっぱなしで、MODEレジスタのREV機能（残響音効果）でかっこよく消音させてるっぽい？
      * 
-     * @param[in]   value   音程。1は無音
+     * @param[in]   clockCounter    CPUのクロックカウンタ
+     * @param[in]   value           音程(1～127)
+     *                              @arg 1: 無音
      * @param[in]   reverberatedSoundEffect 残響音効果が有効かどうか
      */
     virtual void setFRS(const s64 clockCounter, const u8 value, const bool reverberatedSoundEffect) {}

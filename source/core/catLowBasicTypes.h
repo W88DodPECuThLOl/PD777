@@ -1,4 +1,9 @@
-﻿#pragma once
+﻿/**
+ * @file    catLowBasicTypes.h
+ * @brief   基本的な型を定義
+ */
+
+#pragma once
 
 #if defined(BUILD_WASM)
 

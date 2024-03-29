@@ -43,10 +43,10 @@ PD777::execMoveHtoNRM(const u16 pc, const u16 code)
     const auto H = regs.getH();
     regs.setLineBufferRegister(H);
 
-    const auto verticalCounter = crt.getVerticalCounter();
-    if(verticalCounter < 24) [[unlikely]] {
+    if(crt.isVBLK()) [[unlikely]] {
         return; // VBLK期間中なので描画しない
     }
+    const auto verticalCounter = crt.getVerticalCounter();
     const auto spriteData0 = readMem((H << 2) | 0);
     const auto spriteData1 = readMem((H << 2) | 1);
     const auto spriteData2 = readMem((H << 2) | 2);
@@ -1372,7 +1372,7 @@ PD777::execSubA1A1toA1(const u16 pc, const u16 code)
 
     const auto N = code & 0b00000'0000011;
     const auto A1 = regs.getA1();
-    regs.setSkip(A1 < A1);
+    //regs.setSkip(A1 < A1);    // 常にfalse
     regs.setA1(A1 - A1);
     regs.setL(N);
 }
@@ -1518,7 +1518,7 @@ PD777::execSubA2A2toA2(const u16 pc, const u16 code)
 //    print(pc, code, mnemonic, u8"Subtract A2[7:1] and A2[7:1], store to A2[7:1], Skip if borrow, N=>L[2:1]", u8"BOJ");
     const auto N = code & 0b00000'0000011;
     const auto A2 = regs.getA2();
-    regs.setSkip(A2 < A2);
+    //regs.setSkip(A2 < A2);    // 常にfalse
     regs.setA2(A2 - A2);
     regs.setL(N);
 }
@@ -2068,6 +2068,7 @@ PD777::term()
 
 void PD777::execute()
 {
+    // CPU処理
     if(!regs.isSkip()) [[likely]] {
         // fetch
         auto address = regs.getPC();
@@ -2085,22 +2086,26 @@ void PD777::execute()
         regs.nextPC();
     }
 
-    const auto hblk  = crt.isHBLK();
+    // 描画処理
     const auto hblk4 = crt.is4H_BLK();
-    if(crt.step()) [[unlikely]] {
-        // 新しいフレーム
-
-        // サウンドを定期的に更新しておく
-        setFLS(sound.getClockCounter(), sound.getFLS(), sound.getReverberatedSoundEffect());
-        setFRS(sound.getClockCounter(), sound.getFRS(), sound.getReverberatedSoundEffect());
-
+    const auto vblk  = crt.step();
+    if(!hblk4 && crt.is4H_BLK()) {
         // 4HBLKでクリアされるらしい
         for(int i = 0; i <= 0x18; ++i) {
             const auto address = (i << 2) | 3;
             const auto value = readMem(address);
             writeMem(address, value & ~1);
         }
+        // ラインバッファを入れ替えて、描画できるようにする
+        regs.flipLineBufferRegister();
+        regs.clearLineBufferRegister();
+    }
+    if(vblk) [[unlikely]] {
+        // 新しいフレーム
 
+        // サウンドを定期的に更新しておく
+        setFLS(sound.getClockCounter(), sound.getFLS(), sound.getReverberatedSoundEffect());
+        setFRS(sound.getClockCounter(), sound.getFRS(), sound.getReverberatedSoundEffect());
 #if false
         // イメージ作成
         makePresentImage();
@@ -2121,18 +2126,8 @@ void PD777::execute()
             graphBuffer.reset();
         }
 #endif
-
         // 作成したイメージを画面に出力する
         present();
-    } else {
-        if(!hblk4 && crt.is4H_BLK()) {
-            // 4HBLKでクリアされるらしい
-            for(int i = 0; i <= 0x18; ++i) {
-                const auto address = (i << 2) | 3;
-                const auto value = readMem(address);
-                writeMem(address, value & ~1);
-            }
-        }
     }
 
     // サウンド生成用のカウンタを加算

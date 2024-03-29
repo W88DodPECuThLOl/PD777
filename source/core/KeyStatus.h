@@ -243,9 +243,13 @@ struct KeyStatus {
     const u8 convertMap(const u8 STB, const KeyMapping& keyMapping) const;
     /**
      * @brief キー入力の状態からKINの値に変換する
-     * @param[in]   STB キー入力をスキャンするときの値
-     *                  例えば0b1110だとS1に繋がってるA8～A12が取得される
+     * @param[in]   STB キー入力をスキャンするときの値<br>
+     *                  例えば0b1110だとS1に繋がってるA8～A12が取得される<br>
      *                  例えば0b1100だとS1とS2に繋がってるのの論理和が取得される
+     * @param[in]   keyMapping      A8～A12の割り当て
+     * @param[in]   cassetteNumber  カセット識別子(0～11)
+     *                  @arg 0:     不明
+     *                  @arg 1～11: カセット番号
      */
     const u8 convert(const u8 STB, const KeyMapping& keyMapping, const u32 cassetteNumber) const;
 };

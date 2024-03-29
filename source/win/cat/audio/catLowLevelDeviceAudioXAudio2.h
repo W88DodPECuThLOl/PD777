@@ -55,7 +55,8 @@ public:
 
 	/**
 	 * @brief	再生する
-	 * @param[in]	group	どのグループで再生するか
+	 * @param[in]		group	どのグループで再生するか
+	 * @param[in,out]	decoder	デコーダ
 	 */
 	virtual AudioHandle play( decoder::AudioDecoder* decoder, const AudioGroup group );
 
