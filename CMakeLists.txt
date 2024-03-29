@@ -10,14 +10,45 @@ project(${PROJECT_NAME} CXX C)
 set(CMAKE_CONFIGURATION_TYPES "Debug;Release" CACHE STRING "" FORCE)
 
 #=====================================================================================
+# ビルドオプション追加
+#=====================================================================================
+
+# WebAssemlyでビルドする
+option(USE_FEATURE_WEB_ASSEMBLY "Use feature WebAssembly" OFF)
+if(USE_FEATURE_WEB_ASSEMBLY)
+	add_definitions(-DBUILD_WASM=32)
+endif(USE_FEATURE_WEB_ASSEMBLY)
+
+#=====================================================================================
 # ヘッダとソースを再帰的に検索
 #=====================================================================================
 
 #-------------------------------------------------------------------------------------
 # ソースファイル
 #-------------------------------------------------------------------------------------
-file(GLOB_RECURSE PRIVATE_SOURCE_FILES RELATIVE "${CMAKE_SOURCE_DIR}" "source/*.cpp")
-file(GLOB_RECURSE PRIVATE_HEADER_FILES RELATIVE "${CMAKE_SOURCE_DIR}" "source/*.h")
+
+file(GLOB_RECURSE CORE_SOURCE_FILES RELATIVE "${CMAKE_SOURCE_DIR}" "source/core/*.cpp")
+file(GLOB_RECURSE CORE_HEADER_FILES RELATIVE "${CMAKE_SOURCE_DIR}" "source/core/*.h")
+if(USE_FEATURE_WEB_ASSEMBLY)
+	# WebAssembly
+	file(GLOB_RECURSE WASM_SOURCE_FILES RELATIVE "${CMAKE_SOURCE_DIR}" "source/wasm/*.cpp")
+	file(GLOB_RECURSE WASM_HEADER_FILES RELATIVE "${CMAKE_SOURCE_DIR}" "source/wasm/*.h")
+	list(APPEND WASM_SOURCE_FILES ${CORE_SOURCE_FILES})
+	list(APPEND WASM_HEADER_FILES ${CORE_HEADER_FILES})
+	set(PRIVATE_SOURCE_FILES ${WASM_SOURCE_FILES})
+	set(PRIVATE_HEADER_FILES ${WASM_HEADER_FILES})
+else(USE_FEATURE_WEB_ASSEMBLY)
+	# Windows
+	file(GLOB_RECURSE WIN_SOURCE_FILES RELATIVE "${CMAKE_SOURCE_DIR}" "source/win/*.cpp")
+	file(GLOB_RECURSE WIN_HEADER_FILES RELATIVE "${CMAKE_SOURCE_DIR}" "source/win/*.h")
+	list(APPEND WIN_SOURCE_FILES ${CORE_SOURCE_FILES})
+	list(APPEND WIN_HEADER_FILES ${CORE_HEADER_FILES})
+	set(PRIVATE_SOURCE_FILES ${WIN_SOURCE_FILES})
+	set(PRIVATE_HEADER_FILES ${WIN_HEADER_FILES})
+endif(USE_FEATURE_WEB_ASSEMBLY)
+
+message(STATUS "${PRIVATE_SOURCE_FILES}")
+message(STATUS "${PRIVATE_HEADER_FILES}")
 
 # 実行ファイルを追加
 add_executable(${PROJECT_NAME} ${PRIVATE_SOURCE_FILES} ${PRIVATE_HEADER_FILES})

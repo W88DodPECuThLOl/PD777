@@ -1,6 +1,4 @@
-﻿#pragma once
-
-#include "KeyStatus.h"
+﻿#include "KeyStatus.h"
 
 KeyStatus::KeyStatus()
 {
