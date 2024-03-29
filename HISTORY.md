@@ -2,8 +2,16 @@
 
 ## verX.XX.XX
 
+全般
+* リファクタリング
+* コメントの修正と追加
+
 コア
 * 「VIDEO GAME TEST DISPLAY」をデフォルトに
+* NRMレジスタ関連を整理中
+
+WASM
+* 実験中
 
 ## ver0.03.24
 
