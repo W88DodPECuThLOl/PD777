@@ -1,9 +1,14 @@
-﻿#if defined(_WIN32)
-#include "win/WinPD777.h"
+﻿/**
+ * @file main.cpp
+ * @brief Windows用のMain
+ */
+
+#if defined(_WIN32)
+#include "WinPD777.h"
 #include <Windows.h>
-#include "win/cat/win/catWinWindowClassEx.h"
-#include "win/cat/win/catWinWindow.h"
-#include "win/cat/win/catCom.h"
+#include "cat/win/catWinWindowClassEx.h"
+#include "cat/win/catWinWindow.h"
+#include "cat/win/catCom.h"
 #include <thread>
 #include <memory>
 #else
