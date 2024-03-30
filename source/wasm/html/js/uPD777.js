@@ -37,6 +37,8 @@ export class uPD777 {
     #previousRenderTimestamp;
     #previousTimestamp;
 
+    #audio;
+
     /**
      * @param {string} codeFilename コードファイル
      */
@@ -122,11 +124,17 @@ export class uPD777 {
      * @param{string}	wasmFilename	読み込むWASMファイル
      * @returns 
      */
-    start(wasmFilename, queryString)
+    start(wasmFilename, audio, queryString)
     {
+        this.#audio = audio;
         const importObject = {
             // メモリ
-            env: { memory: this.#memory }
+            env: { memory: this.#memory },
+            // サウンド
+            sound: {
+                writeFLS: (clockCounter, value, reverberatedSoundEffect)=>{ audio.writeFLS(clockCounter, value, reverberatedSoundEffect); },
+                writeFRS: (clockCounter, value, reverberatedSoundEffect)=>{ audio.writeFRS(clockCounter, value, reverberatedSoundEffect); },
+            }
         };
 
         return WebAssembly.instantiateStreaming(fetch(wasmFilename), importObject).then(
@@ -177,6 +185,7 @@ export class uPD777 {
     reset() {
         this.wasm.clearKeyStatus();
         this.wasm.reset();
+        this.#audio.reset();
     }
 
     /**
@@ -209,8 +218,8 @@ export class uPD777 {
             const keyPush3       = this.#gamePad.buttons[this.#gamePad.BUTTON_Y_INDEX].current ? 0x40 : 0x00;
             const keyPush2       = this.#gamePad.buttons[this.#gamePad.BUTTON_B_INDEX].current ? 0x20 : 0x00;
             const keyPush1       = this.#gamePad.buttons[this.#gamePad.BUTTON_X_INDEX].current ? 0x40 : 0x00;
-            const keyUp          = this.#gamePad.buttons[this.#gamePad.BUTTON_UP_INDEX].current ? 0x40 : 0x00;
-            const keyDown        = this.#gamePad.buttons[this.#gamePad.BUTTON_DOWN_INDEX].current ? 0x20 : 0x00;
+            const keyUp          = this.#gamePad.buttons[this.#gamePad.BUTTON_VUP_INDEX].current ? 0x40 : 0x00;
+            const keyDown        = this.#gamePad.buttons[this.#gamePad.BUTTON_VDOWN_INDEX].current ? 0x20 : 0x00;
             const keyDebug       = false ? 0x80 : 0x00;
             //
             const A08Value = keyGameStart | keyLever1Left | keyLever1Right | keyGameSelect;

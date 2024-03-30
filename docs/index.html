@@ -1,22 +1,64 @@
 <!doctype html>
 <html>
-	<head>
-		<meta charset=”UTF-8″>
-		<title>μPD777</title>
-	</head>
-	<body>
-		<div>
-			<!-- 画面 -->
-			<div id="fs-target">
-				<div id="fs-inner" class="canvas-wrapper">
+    <head>
+        <meta charset=”UTF-8″>
+        <title>μPD777</title>
+        <link rel="stylesheet" href="./css/catTextScreen.css">
+        <link rel="stylesheet" href="./css/catBar.css">
+        <link rel="stylesheet" href="./css/catVolume.css">
+        <link rel="stylesheet" href="./css/catFullScreenIcon.css">
+    </head>
+    <body>
+        <div>
+            <!-- 画面 -->
+            <div id="fs-target" class="canvas">
+                <div id="fs-inner" class="canvas-wrapper">
                     <canvas id="graphicCanvas" class="graphicsLayer"></canvas>
-				</div>
-			</div>
+                </div>
+            </div>
+            <!-- 画面下部のメニューバー -->
+            <div id="bar" class="cat-bar">
+                <div class="cat-bar-inner">
+                    <div id="cat-bar-system" class="cat-bar-system">
+                        <!-- ボリューム -->
+                        <div class="cat-volume-setting">
+                            <div id="cat-volume-off" class="cat-volume-off-icon"></div>
+                            <div id="cat-volume" class="cat-volume-icon"></div>
+                            <input id="cat-volume-bar" type="range" value="0" min="0" max="100" data-unit="%"/>
+                        </div>
+                        <!-- キーコンフィグ -->
+                        <!--
+                        <div id="keyboard-setting" class="cat-system-icon-keyboard" onclick="ShowKeyConfigWindow()"></div>
+                        -->
+                        <!-- フルスクリーン切り替え -->
+                        <div id="full-screen" class="cat-media-icon-full-screen"></div>
+                        <!--
+                        <div id="system-setting" class="cat-system-icon-setting"></div>
+                        <div class="cat-system-icon-game-pad"></div>
+                        -->
+                    <div>
+                </div>
+            </div>
+            <!-- その他 -->
             <input type="file" id="file-input" accept=".bin777,.ptn777" style="display:none;"/>
-		</div>
-		<script type="module">
-			"use strict";
-			import { uPD777 } from './js/uPD777.js';
+        </div>
+        <script type="module">
+            "use strict";
+            import { uPD777 } from './js/uPD777.js';
+            import { CatAudio } from './js/cat/catAudio.js';
+            import CatFullScreen from './js/cat/catFullScreen.js';
+
+            // コンフィグ
+            const queryString = window.location.search;
+            if(queryString) {
+                const urlParams = new URLSearchParams(queryString);
+                // 下部のバーの非表示
+                const hiddenBar = urlParams.get("hiddenBar");
+                if(hiddenBar && (0 | hiddenBar)) {
+                    const task_bar = document.getElementById("bar");
+                    task_bar.style.display = 'none';
+                }
+            }
 
             // 描画先のキャンパス取得
             const graphicCanvas = document.getElementById("graphicCanvas");
@@ -59,11 +101,80 @@
                 });
             }
 
+            // フルスクリーン制御
+            new CatFullScreen(document, "fs-target", "full-screen", evt => {
+                    // フルスクリーンの設定
+                    const screenWidth = window.innerWidth;
+                    const screenHeight = window.innerHeight;
+                    const elem = document.getElementById("fs-inner")
+                    elem.style.transform = "scale(" + screenWidth / 375.0 + "," + screenHeight / 240.0 + ")";
+                },
+                evt => {
+                    // フルスクリーン抜けたときの設定
+                    const elem = document.getElementById("fs-inner")
+                    elem.style.transform = "";
+                }
+            );
+
+            // サウンド
+            var audio = new CatAudio();
+            var soundMute = true;
+            var soundMasterVolume = 0.3;
+            {
+                const volumeCtrl = document.getElementById("cat-volume");
+                const volumeBar = document.getElementById("cat-volume-bar");
+                volumeBar.value = soundMasterVolume * 100;
+
+                volumeCtrl.addEventListener("click", ()=>{
+                    soundMute = !soundMute;
+                    if(soundMute) {
+                        volumeCtrl.style.backgroundImage = 'url(./img/icon/ボリュームOFFアイコン.png)';
+                        audio.setVolume(0);
+                    } else {
+                        volumeCtrl.style.backgroundImage = 'url(./img/icon/ボリュームアイコン3.png)';
+                        audio.setVolume(soundMasterVolume);
+                    }
+                });
+                volumeBar.addEventListener("input", ()=>{
+                    soundMute = false;
+                    soundMasterVolume = volumeBar.value / 100;
+                    if(soundMute) {
+                        volumeCtrl.style.backgroundImage = 'url(./img/icon/ボリュームOFFアイコン.png)';
+                    } else {
+                        volumeCtrl.style.backgroundImage = 'url(./img/icon/ボリュームアイコン3.png)';
+                    }
+                    audio.setVolume(soundMasterVolume);
+                });
+            }
+            // タブの表示が変更されたとき
+            document.addEventListener('visibilitychange', function(){
+                if(document.visibilityState === 'hidden') {
+                    audio.setVolume(0.0);
+                }else if(document.visibilityState === 'visible') {
+                    audio.setVolume(soundMasterVolume);
+                }
+            }, false);
+
             // ページ読み込み後に実行される
-			window.onload = async function() {
-				// 開始
-				cpu.start("./wasm/uPD777.wasm", window.location.search);
-			}
-		</script>
-	</body>
+            window.onload = async function() {
+                // サウンド
+                const soundOn = document.getElementById("cat-volume-off");
+                const volume = document.getElementById("cat-volume");
+                const volumeBar = document.getElementById("cat-volume-bar");
+                soundOn.addEventListener("click", ()=>{
+                    // サウンドの初期化
+                    audio.init();
+                    // 多重初期化できないように消しちゃう
+                    soundMute = false;
+                    soundOn.style.display = 'none';
+                    volume.style.display = 'inline';
+                    volumeBar.style.display = 'inline';
+                    // ボリューム設定
+                    audio.setVolume(soundMasterVolume);
+                });
+                // 開始
+                cpu.start("./wasm/uPD777.wasm", audio, window.location.search);
+            }
+        </script>
+    </body>
 </html>

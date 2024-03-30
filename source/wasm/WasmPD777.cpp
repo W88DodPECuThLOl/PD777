@@ -1,4 +1,13 @@
 ﻿#include "WasmPD777.h"
+#include "clangSupport.h"
+
+extern "C" {
+WASM_IMPORT("sound", "writeFLS")
+void writeFLS(const s64 clockCounter, const u8 value, const bool reverberatedSoundEffect);
+
+WASM_IMPORT("sound", "writeFRS")
+void writeFRS(const s64 clockCounter, const u8 value, const bool reverberatedSoundEffect);
+} // extern "C"
 
 WasmPD777::WasmPD777()
     : PD777()
@@ -44,4 +53,16 @@ WasmPD777::reset()
     regs.reset();
     sound.reset();
     calledVBLK = false;
+}
+
+void
+WasmPD777::setFLS(const s64 clockCounter, const u8 value, const bool reverberatedSoundEffect)
+{
+    writeFLS(clockCounter, value, reverberatedSoundEffect);
+}
+
+void
+WasmPD777::setFRS(const s64 clockCounter, const u8 value, const bool reverberatedSoundEffect)
+{
+    writeFRS(clockCounter, value, reverberatedSoundEffect);
 }

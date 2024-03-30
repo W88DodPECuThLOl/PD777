@@ -1,0 +1,42 @@
+* {
+	margin:0;
+	padding:0;
+}
+
+/*
+body {
+    margin: 0;
+	padding: 0;
+    background-color: #606060;
+}
+*/
+
+.graphicsLayer {
+    width: 375px;
+    height: 240px;
+    transform-origin: top left;
+/*    transform: scaleY(1.0); */
+}
+
+.canvas-wrapper {
+    position: relative;
+    width: 375px;
+    height: 240px;
+    margin: 0;
+
+    transform-origin: top left;
+}
+
+.canvas-wrapper canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    margin: 0;
+}
+
+.canvas-wrapper .console {
+    position: absolute;
+    top: 0;
+    left: 0;
+    margin: 0;
+}

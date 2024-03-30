@@ -1,0 +1,44 @@
+.cat-volume-off-icon {
+    background: url("../img/icon/ボリュームOFFアイコン.png");
+    background-repeat: no-repeat;
+    background-size: cover; /* 元画像の縦横比のまま、要素内で可能な限り大きくする */
+    width: 24px;
+    height: 24px;
+    transform: translate(1px, 1px);
+    transition: all .15s;
+    margin-right: 3px;
+}
+.cat-volume-off-icon:hover {
+    filter: drop-shadow(1px 1px 2px rgb(192, 192, 0));
+    transform: translate(0px, 0px);
+}
+
+.cat-volume-icon {
+    background: url("../img/icon/ボリュームアイコン3.png");
+    background-repeat: no-repeat;
+    background-size: cover; /* 元画像の縦横比のまま、要素内で可能な限り大きくする */
+    width: 24px;
+    height: 24px;
+    transform: translate(1px, 1px);
+    transition: all .15s;
+    margin-right: 3px;
+
+    /* 非表示 */
+    display: none;
+}
+.cat-volume-icon:hover {
+    filter: drop-shadow(1px 1px 2px rgb(192, 192, 0));
+    transform: translate(0px, 0px); 
+}
+
+
+.cat-volume-setting {
+    display: flex; /* 横に並べる */
+}
+.cat-volume-setting input {
+    top: 5px;
+    width: 80px;
+
+    /* 非表示 */
+    display: none;
+}

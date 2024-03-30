@@ -1,0 +1,102 @@
+.cat-bar {
+    background-color: #333;
+    width: 375px;
+    cursor: default;
+    user-select: none;
+}
+
+.cat-bar-inner {
+    display: flex; /* 横並びに配置する */
+    border-color: #111;
+    border-style:solid;
+    border-width: 1px;
+}
+
+.cat-bar-media {
+    color: #CECECE;
+    text-align: center;
+    font-size: 12px;
+}
+
+.cat-bar-media ul {
+    display: flex; /* 横並びに配置する */
+    list-style: none; /* リストの●を出さないように */
+    margin: 0px;
+}
+
+.cat-bar-media ul li {
+    margin-top: 1px;
+    margin-bottom: 1px;
+    margin-right: 5px;
+    position: relative;
+    width: 24px;
+    height: 24px;
+}
+
+.cat-bar-media ul li ul {
+    display: block; /* 子供は縦の並びに配置する */
+    position: absolute;
+
+    top: 0px;
+    left: -4px;
+    height: 0px;
+    width: 180px;
+
+    /* 非表示 */
+    visibility: hidden;
+    /* 矩形でクリッピング */
+    clip-path:inset(0px);
+
+    background-color: #101010;
+    transition: all 0.1s;
+    transition-timing-function: ease-out;
+}
+.cat-bar-media ul li:hover ul {
+    visibility: visible;
+    top: -128px;
+    height: 128px; /* 4:102 5:126 6:150 7:174 */
+}
+
+
+
+/*下の階層を持っているulの指定*/
+.cat-bar-media ul li ul li {
+    /*絶対配置で位置を指定*/
+    position: relative;
+    width: 250px;
+    left: -40px;
+    height: 16px;
+}
+
+.cat-bar-media ul li ul li div {
+    /*
+    background-color: #292929;
+    */
+    height: 16px;
+
+    transition: all 0.1s;
+}
+.cat-bar-media ul li ul li div:hover {
+    background-color: #CFCFCF;
+    color: #202020;
+}
+
+
+/* メディアメニューの無効な項目 */
+.media-menu-item-disable {
+    color: #606060;
+    pointer-events: none; /* マウスイベントを受け付けないように */
+}
+
+/* メディアメニューのヘッダ部分 */
+.media-menu-item-header {
+    background-color: #5A5A5A;
+    font-weight: bold;
+    pointer-events: none; /* マウスイベントを受け付けないように */
+}
+
+
+.cat-bar-system {
+    display: flex; /* 横に並べる */
+    margin: 0 0 0 auto; /* 右寄せ */
+}

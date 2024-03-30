@@ -1,0 +1,14 @@
+.cat-system-icon-keyboard {
+    background: url("../img/icon/キーボードアイコン4.png");
+    background-repeat: no-repeat;
+    background-size: cover; /* 元画像の縦横比のまま、要素内で可能な限り大きくする */
+    width: 24px;
+    height: 24px;
+    transform: translate(1px, 1px);
+    transition: all .15s;
+    margin-right: 3px;
+}
+.cat-system-icon-keyboard:hover {
+    filter: drop-shadow(1px 1px 2px rgb(192, 192, 0));
+    transform: translate(0px, 0px);
+}
