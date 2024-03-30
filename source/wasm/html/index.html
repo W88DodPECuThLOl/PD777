@@ -7,6 +7,39 @@
         <link rel="stylesheet" href="./css/catBar.css">
         <link rel="stylesheet" href="./css/catVolume.css">
         <link rel="stylesheet" href="./css/catFullScreenIcon.css">
+        <style type="text/css">
+            .cp_link {
+                display: inline-block;
+                perspective: 1000px;
+                perspective-origin: 50% 50%;
+                vertical-align: bottom;
+                overflow: hidden;
+            }
+            .cp_link span {
+                display: inline-block;
+                position: relative;
+                padding: 0.1em 0.3em;
+                transition: .4s;
+                transform-origin: 50% 0%;
+                transform-style: preserve-3d;
+            }
+            .cp_link span:after {
+                display: inline-block;
+                position: absolute;
+                padding: 0.1em 0.3em;
+                left: 0;
+                top: 0;
+                content: attr(data-text);
+                color: #fff;
+                background-color: #CCC;
+                transform-origin: 50% 0%;
+                transform: translate3d(0, 105%, 0) rotateX(-90deg);
+            }
+            .cp_link:hover span {
+                background-color: #CCC;
+                transform: translate3d(0, 0, -30px) rotateX(90deg);
+            }
+        </style>
     </head>
     <body>
         <div>
@@ -20,6 +53,12 @@
             <div id="bar" class="cat-bar">
                 <div class="cat-bar-inner">
                     <div id="cat-bar-system" class="cat-bar-system">
+                        <a href="https://github.com/W88DodPECuThLOl/PD777" target="_blank" rel="noopener noreferrer" class="cp_link">
+                            <span data-text="GitHub">GitHub</span>
+                        </a>
+                        <a href="https://twitter.com/W88DodPECuThLOl" target="_blank" rel="noopener noreferrer" class="cp_link">
+                            <span data-text="X(Twitter)">X(Twitter)</span>
+                        </a>
                         <!-- ボリューム -->
                         <div class="cat-volume-setting">
                             <div id="cat-volume-off" class="cat-volume-off-icon"></div>
