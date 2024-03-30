@@ -50,6 +50,7 @@ WASM_EXPORT void reset();
 WASM_EXPORT void execute(const s32 clock);
 WASM_EXPORT bool setupCode(const void* data, const size_t dataSize);
 WASM_EXPORT bool setupPattern(const void* data, const size_t dataSize);
+WASM_EXPORT bool setupAuto(const void* data, const size_t dataSize);
 WASM_EXPORT bool isVRAMDirty();
 WASM_EXPORT void setVRAMDirty();
 WASM_EXPORT const void* getVRAMImage();
@@ -102,6 +103,19 @@ execute(const s32 clock)
             cpu->execute();
         }
     }
+}
+
+bool
+setupAuto(const void* data, const size_t dataSize)
+{
+    if(setupPattern(data, dataSize)) {
+        return true; // 成功
+    }
+    if(setupCode(data, dataSize)) {
+        reset();
+        return true; // 成功
+    }
+    return false;
 }
 
 bool

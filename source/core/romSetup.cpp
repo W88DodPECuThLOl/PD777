@@ -425,12 +425,15 @@ PD777::setupCGRomFormatted(const void* data, size_t dataSize)
 bool
 PD777::setupCGRom(const void* data, size_t dataSize)
 {
-    for(auto& r : patternCGRom7x7) { r = 0; }
-    for(auto& r : patternCGRom8x7) { r = 0; }
-    for(auto& r : characterBent)   { r = 0xFF; }
     if(data != nullptr && dataSize == 0x340) {
+        for(auto& r : patternCGRom7x7) { r = 0; }
+        for(auto& r : patternCGRom8x7) { r = 0; }
+        for(auto& r : characterBent)   { r = 0xFF; }
         return setupCGRomFormatted(data, dataSize);
     } else if(data != nullptr && dataSize == 0x4D0) {
+        for(auto& r : patternCGRom7x7) { r = 0; }
+        for(auto& r : patternCGRom8x7) { r = 0; }
+        for(auto& r : characterBent)   { r = 0xFF; }
         return setupCGRomRawBitStream(data, dataSize);
     } else if(data == nullptr) {
         for(auto i = 0; i < 686; ++i) { patternCGRom7x7[i] = patternRom[i]; }

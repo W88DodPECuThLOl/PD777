@@ -9,19 +9,57 @@
 			<!-- 画面 -->
 			<div id="fs-target">
 				<div id="fs-inner" class="canvas-wrapper">
-					<canvas id="graphicCanvas" class="graphicsLayer"></canvas>
+                    <canvas id="graphicCanvas" class="graphicsLayer"></canvas>
 				</div>
 			</div>
+            <input type="file" id="file-input" accept=".bin777,.ptn777" style="display:none;"/>
 		</div>
 		<script type="module">
 			"use strict";
 			import { uPD777 } from './js/uPD777.js';
-			// ページ読み込み後に実行される
+
+            // CPU作成
+            const cpu = new uPD777(navigator, document, graphicCanvas);
+
+            // ドラッグ＆ドロップ
+            {
+                document.getElementById('graphicCanvas').addEventListener('dragover', function () {
+                    event.preventDefault();
+                    this.style.backgroundColor = '#80ff80';
+                });
+                document.getElementById('graphicCanvas').addEventListener('dragleave', function () {
+                    this.style.backgroundColor = '';
+                });
+                document.getElementById('graphicCanvas').addEventListener('drop', function () {
+                    event.preventDefault();
+                    this.style.backgroundColor = '';
+                    if (event.dataTransfer.files.length > 0) {
+                        document.getElementById('file-input').files = event.dataTransfer.files;
+                        document.getElementById('file-input').dispatchEvent(new Event('change'));
+                    }
+                });
+                var fileInput = document.getElementById('file-input');
+                fileInput.addEventListener('change', evt => {
+                    let input = evt.target;
+                    if (input.files.length == 0) {
+                        return;
+                    }
+                    for(var i = 0; i < input.files.length; ++i) {
+                        const file = input.files[i];
+                        const reader = new FileReader();
+                        reader.onload = () => {
+                            const readData = new Uint8Array(reader.result);
+                            cpu.setupAuto(readData);
+                        };
+                        reader.readAsArrayBuffer(file);
+                    }
+                });
+            }
+
+            // ページ読み込み後に実行される
 			window.onload = async function() {
 				// 描画先のキャンパス取得
 				const graphicCanvas = document.getElementById("graphicCanvas");
-				// CPU作成
-				const cpu = new uPD777(navigator, document, graphicCanvas);
 				// 開始
 				cpu.start("./wasm/uPD777.wasm", window.location.search);
 			}

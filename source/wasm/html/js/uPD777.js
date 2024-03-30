@@ -27,7 +27,7 @@ export class uPD777 {
     /**
      * キーボード入力
      */
-    #keyboard;
+    //#keyboard;
 
     /**
      * 描画するキャンパス
@@ -40,7 +40,7 @@ export class uPD777 {
     /**
      * @param {string} codeFilename コードファイル
      */
-    setupCode(codeFilename) {
+    readAndSetupCode(codeFilename) {
         const fileReader = new XMLHttpRequest() ;
         fileReader.open("get", codeFilename, true) ;
         fileReader.responseType = "arraybuffer" ;
@@ -55,16 +55,7 @@ export class uPD777 {
             }
             const objArray = fileReader.response;
             const objFile  = new Uint8Array(objArray);
-
-            // WASM側でメモリ確保して、そこへ書き込む
-            const fileMemoryHandle = this.wasm.memoryAllocate(objFile.byteLength);
-            const fileMemory = new Uint8Array(this.#memory.buffer, fileMemoryHandle, objFile.byteLength);
-            for(let i = 0; i < objFile.byteLength; ++i) {
-                fileMemory[i] = objFile[i];
-            }
-            this.wasm.setupCode(fileMemoryHandle, objFile.byteLength);
-            this.wasm.memoryFree(fileMemoryHandle); // 忘れずにメモリを解放しておく
-            this.reset();
+            this.setupCode(objFile);
         }
         fileReader.send();
     }
@@ -72,7 +63,7 @@ export class uPD777 {
     /**
      * @param {string} patternFilename パターンファイル名
      */
-    setupPattern(patternFilename) {
+    readAndSetupPattern(patternFilename) {
         const fileReader = new XMLHttpRequest() ;
         fileReader.open("get", patternFilename, true) ;
         fileReader.responseType = "arraybuffer" ;
@@ -87,17 +78,43 @@ export class uPD777 {
             }
             const objArray = fileReader.response;
             const objFile  = new Uint8Array(objArray);
-
-            // WASM側でメモリ確保して、そこへ書き込む
-            const fileMemoryHandle = this.wasm.memoryAllocate(objFile.byteLength);
-            const fileMemory = new Uint8Array(this.#memory.buffer, fileMemoryHandle, objFile.byteLength);
-            for(let i = 0; i < objFile.byteLength; ++i) {
-                fileMemory[i] = objFile[i];
-            }
-            this.wasm.setupPattern(fileMemoryHandle, objFile.byteLength);
-            this.wasm.memoryFree(fileMemoryHandle); // 忘れずにメモリを解放しておく
+            this.setupPattern(objFile);
         }
         fileReader.send();
+    }
+
+    setupCode(data) {
+        // WASM側でメモリ確保して、そこへ書き込む
+        const fileMemoryHandle = this.wasm.memoryAllocate(data.byteLength);
+        const fileMemory = new Uint8Array(this.#memory.buffer, fileMemoryHandle, data.byteLength);
+        for(let i = 0; i < data.byteLength; ++i) {
+            fileMemory[i] = data[i];
+        }
+        this.wasm.setupCode(fileMemoryHandle, data.byteLength);
+        this.wasm.memoryFree(fileMemoryHandle); // 忘れずにメモリを解放しておく
+        this.reset();
+    }
+
+    setupPattern(data) {
+        // WASM側でメモリ確保して、そこへ書き込む
+        const fileMemoryHandle = this.wasm.memoryAllocate(data.byteLength);
+        const fileMemory = new Uint8Array(this.#memory.buffer, fileMemoryHandle, data.byteLength);
+        for(let i = 0; i < data.byteLength; ++i) {
+            fileMemory[i] = data[i];
+        }
+        this.wasm.setupPattern(fileMemoryHandle, data.byteLength);
+        this.wasm.memoryFree(fileMemoryHandle); // 忘れずにメモリを解放しておく
+    }
+
+    setupAuto(data) {
+        // WASM側でメモリ確保して、そこへ書き込む
+        const fileMemoryHandle = this.wasm.memoryAllocate(data.byteLength);
+        const fileMemory = new Uint8Array(this.#memory.buffer, fileMemoryHandle, data.byteLength);
+        for(let i = 0; i < data.byteLength; ++i) {
+            fileMemory[i] = data[i];
+        }
+        this.wasm.setupAuto(fileMemoryHandle, data.byteLength);
+        this.wasm.memoryFree(fileMemoryHandle); // 忘れずにメモリを解放しておく
     }
 
     /**
@@ -125,10 +142,10 @@ export class uPD777 {
                     const urlCode = urlParams.get("code");
                     const urlPtn  = urlParams.get("ptn");
                     if(urlPtn) {
-                        this.setupPattern(urlPtn);
+                        this.readAndSetupPattern(urlPtn);
                     }
                     if(urlCode) {
-                        this.setupCode(urlCode);
+                        this.readAndSetupCode(urlCode);
                     }
                 }
                 return this;
@@ -147,7 +164,7 @@ export class uPD777 {
         this.#memory = new WebAssembly.Memory({ initial: ~~(this.#heapSize/(64*1024)), maximum: ~~(this.#heapSize/(64*1024) + 1) });
         // 入力関連
         this.#gamePad = new CatGamePad(navigator);
-        this.#keyboard = new CatKey(document);
+        //this.#keyboard = new CatKey(document);
         // グラフィック関連
         canvasCtx.setAttribute("width", 375);
         canvasCtx.setAttribute("height", 240);
@@ -236,19 +253,24 @@ export class uPD777 {
         // 前回の描画してからの経過時間(ms)
         const renderElapsed = timestamp - this.#previousRenderTimestamp;
 
-        // 入力の更新処理
-        this.#inputUpdate();
+        if(elapsed < 3*1000) { // 余りにも長い時間更新が途絶えていたら無視する
+            // 入力の更新処理
+            this.#inputUpdate();
 
-        // CPU更新
-        // CLOCK input  3.579545 MHz
-        // CPU Clock    1.431818 MHz (= 3.579545 MHz / 2.5)
-        this.#cpuUpdate(elapsed * 1431.818);
+            // CPU更新
+            // CLOCK input  3.579545 MHz
+            // CPU Clock    1.431818 MHz (= 3.579545 MHz / 2.5)
+            this.#cpuUpdate(elapsed * 1431.818);
 
-        // 画面描画
-        if(renderElapsed >= 1000/60) {
-            this.#previousRenderTimestamp += 1000/60;
-            // 画像取得して描画
-            this.#getVRAMImage(this.#canvasCtx);
+            // 画面描画
+            if(renderElapsed >= 1000/60) {
+                this.#previousRenderTimestamp += 1000/60;
+                // 画像取得して描画
+                this.#getVRAMImage(this.#canvasCtx);
+            }
+        } else {
+            this.#previousRenderTimestamp = timestamp;
+            this.#previousTimestamp = timestamp;
         }
 
         // VSync待ち
