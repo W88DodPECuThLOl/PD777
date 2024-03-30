@@ -18,19 +18,22 @@
 			"use strict";
 			import { uPD777 } from './js/uPD777.js';
 
+            // 描画先のキャンパス取得
+            const graphicCanvas = document.getElementById("graphicCanvas");
+
             // CPU作成
             const cpu = new uPD777(navigator, document, graphicCanvas);
 
             // ドラッグ＆ドロップ
             {
-                document.getElementById('graphicCanvas').addEventListener('dragover', function () {
+                graphicCanvas.addEventListener('dragover', function () {
                     event.preventDefault();
                     this.style.backgroundColor = '#80ff80';
                 });
-                document.getElementById('graphicCanvas').addEventListener('dragleave', function () {
+                graphicCanvas.addEventListener('dragleave', function () {
                     this.style.backgroundColor = '';
                 });
-                document.getElementById('graphicCanvas').addEventListener('drop', function () {
+                graphicCanvas.addEventListener('drop', function () {
                     event.preventDefault();
                     this.style.backgroundColor = '';
                     if (event.dataTransfer.files.length > 0) {
@@ -58,8 +61,6 @@
 
             // ページ読み込み後に実行される
 			window.onload = async function() {
-				// 描画先のキャンパス取得
-				const graphicCanvas = document.getElementById("graphicCanvas");
 				// 開始
 				cpu.start("./wasm/uPD777.wasm", window.location.search);
 			}
