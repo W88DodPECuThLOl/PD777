@@ -3,7 +3,6 @@
 	<head>
 		<meta charset=”UTF-8″>
 		<title>μPD777</title>
-		<script src="./js/uPD777.js"></script>
 	</head>
 	<body>
 		<div>
@@ -16,54 +15,15 @@
 		</div>
 		<script type="module">
 			"use strict";
-
-			// 描画先のキャンパス取得と設定
-			const graphicCanvas = document.getElementById("graphicCanvas");
-			graphicCanvas.setAttribute("width", 375);
-			graphicCanvas.setAttribute("height", 240);
-			var graphicCanvasCtx = graphicCanvas.getContext("2d");
-
-			// CPU作成
-			var cpu = new uPD777();
-
-			let previousRenderTimestamp;
-			let previousTimestamp;
-			/**
-			 * 更新処理
-			 * @param {number} timestamp ミリ秒単位
-			 */
-			function update(timestamp)
-			{
-				if (previousRenderTimestamp === undefined) {
-					previousRenderTimestamp = timestamp;
-					previousTimestamp = timestamp;
-				}
-				// 前回のフレームからの経過時間(ms)
-				const elapsed = timestamp - previousTimestamp;
-				previousTimestamp = timestamp;
-				// 前回の描画してからの経過時間(ms)
-				const renderElapsed = timestamp - previousRenderTimestamp;
-
-                // CPU更新
-                // CLOCK input  3.579545 MHz
-                // CPU Clock    1.431818 MHz (= 3.579545 MHz / 2.5)
-				cpu.update(elapsed * 1431.818);
-
-				// 画面描画
-				if(renderElapsed >= 1000/60) {
-					previousRenderTimestamp += 1000/60;
-					// 画像取得して描画
-					cpu.getVRAMImage(graphicCanvasCtx);
-				}
-
-				// VSync待ち
-				requestAnimationFrame((timestamp)=>update(timestamp));
-			}
-
+			import { uPD777 } from './js/uPD777.js';
 			// ページ読み込み後に実行される
 			window.onload = async function() {
-				// セットアップして開始
-				cpu.setup("./wasm/uPD777.wasm").then((emu)=>{ update(0); });
+				// 描画先のキャンパス取得
+				const graphicCanvas = document.getElementById("graphicCanvas");
+				// CPU作成
+				const cpu = new uPD777(navigator, document, graphicCanvas);
+				// 開始
+				cpu.start("./wasm/uPD777.wasm", window.location.search);
 			}
 		</script>
 	</body>

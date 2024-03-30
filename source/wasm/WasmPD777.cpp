@@ -5,6 +5,7 @@ WasmPD777::WasmPD777()
     , bVRAMDirty(true)
 {
     PD777::init();
+    keyStatus.clear();
 }
 
 void
@@ -27,4 +28,20 @@ WasmPD777::present()
     }
 
     setVRAMDirty();
+}
+
+void
+WasmPD777::readKIN(KeyStatus& key)
+{
+    key = keyStatus;
+}
+
+void
+WasmPD777::reset()
+{
+    crt.reset();
+    stack.reset();
+    regs.reset();
+    sound.reset();
+    calledVBLK = false;
 }
