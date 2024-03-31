@@ -1,6 +1,6 @@
 # 更新履歴
 
-## verX.XX.XX
+## ver0.03.31
 
 全般
 * リファクタリング
@@ -30,7 +30,7 @@
 | COURSE SWITCH RR | 5 |
 
 WASM
-* 実験中
+* 実験中 ⇒ [GitHub Pages: μPD777](https://w88dodpecuthlol.github.io/PD777/)
 * 入力を実装
 * D&Dでファイルを読み込むように  
   **※ コードを先に読み込むようにすること**
