@@ -40,6 +40,12 @@ export default class {
      */
     #index = 1;
 
+    /**
+     * キーイベントの処理を他にやらせないようにする場合trueを設定する
+     * @type {boolean}
+     */
+    #stopPropagation;
+
     #ctrlKey;
     #shiftKey;
     #capsLock;
@@ -61,6 +67,16 @@ export default class {
         this.#capsLock = false;
         document.addEventListener('keydown', (e)=>this.#keyDownHandler(this, e), false);
         document.addEventListener('keyup', (e)=>this.#keyUpHandler(this, e), false);
+        this.#stopPropagation = true;
+    }
+
+    /**
+     * キーイベント処理を他に処理させないようにするかどうか
+     * @param {boolean} flag 他に処理させない場合はtrue
+     */
+    setStopPropagation(flag)
+    {
+        this.#stopPropagation = flag;
     }
 
     /**
@@ -163,9 +179,12 @@ export default class {
             // バッファに積む
             self.enqueueKeyBuffer(keyCode);
         }
-        // イベントを処理したので、イベントの処理を他にやらせないようにする
-        e.preventDefault();
-        e.stopPropagation();
+
+        if(self.#stopPropagation) {
+            // イベントを処理したので、イベントの処理を他にやらせないようにする
+            e.preventDefault();
+            e.stopPropagation();
+        }
     }
 
     /**
@@ -187,9 +206,11 @@ export default class {
             return false; // フォーカスがなかったら処理しない
         }		
 
-        // イベントを処理したので、イベントの処理を他にやらせないようにする
-        e.preventDefault();
-        e.stopPropagation();
+        if(self.#stopPropagation) {
+            // イベントを処理したので、イベントの処理を他にやらせないようにする
+            e.preventDefault();
+            e.stopPropagation();
+        }
     }
 
     /**

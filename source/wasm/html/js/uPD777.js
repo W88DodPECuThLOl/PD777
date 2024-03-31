@@ -21,13 +21,15 @@ export class uPD777 {
 
     /**
      * ゲームパッド入力
+     * @type {CatGamePad}
      */
     #gamePad;
 
     /**
      * キーボード入力
+     * @type {CatKey}
      */
-    //#keyboard;
+    #keyboard;
 
     /**
      * 描画するキャンパス
@@ -37,6 +39,9 @@ export class uPD777 {
     #previousRenderTimestamp;
     #previousTimestamp;
 
+    /**
+     * オーディオ
+     */
     #audio;
 
     /**
@@ -172,7 +177,8 @@ export class uPD777 {
         this.#memory = new WebAssembly.Memory({ initial: ~~(this.#heapSize/(64*1024)), maximum: ~~(this.#heapSize/(64*1024) + 1) });
         // 入力関連
         this.#gamePad = new CatGamePad(navigator);
-        //this.#keyboard = new CatKey(document);
+        this.#keyboard = new CatKey(document);
+        this.#keyboard.setStopPropagation(false); // キー処理を他のでもできるように
         // グラフィック関連
         canvasCtx.setAttribute("width", 375);
         canvasCtx.setAttribute("height", 240);
@@ -194,11 +200,66 @@ export class uPD777 {
     #inputUpdate() {
         // 入力を更新
         this.wasm.clearKeyStatus();
+        let keyGameStart   = false;
+        let keyLever1Left  = false;
+        let keyLever1Right = false;
+        let keyGameSelect  = false;
+        let keyLever2Left  = false;
+        let keyLever2Right = false;
+        let keyPush4       = false;
+        let keyPush3       = false;
+        let keyPush2       = false;
+        let keyPush1       = false;
+        let keyUp          = false;
+        let keyDown        = false;
+        let keyDebug       = false;
+
         if(this.#gamePad) {
             // ゲームパッドからの入力
             this.#gamePad.update();
 
-            // 入力を反映
+            // LEVER SWITCH, START, SELECT
+            if(this.#gamePad.buttons[this.#gamePad.BUTTON_START_INDEX].current || this.#gamePad.buttons[this.#gamePad.BUTTON_R3_INDEX].current) { keyGameStart = true; }
+            if(this.#gamePad.buttons[this.#gamePad.BUTTON_VLEFT_INDEX].current) { keyLever1Left = true; }
+            if(this.#gamePad.buttons[this.#gamePad.BUTTON_VRIGHT_INDEX].current) { keyLever1Right = true; }
+            if(this.#gamePad.buttons[this.#gamePad.BUTTON_BACK_INDEX].current || this.#gamePad.buttons[this.#gamePad.BUTTON_L3_INDEX].current) { keyGameSelect = true; }
+            if(this.#gamePad.buttons[this.#gamePad.BUTTON_LB_INDEX].current) { keyLever2Left = true; }
+            if(this.#gamePad.buttons[this.#gamePad.BUTTON_RB_INDEX].current) { keyLever2Right = true; }
+            // PUSH1～PUSH4
+            if(this.#gamePad.buttons[this.#gamePad.BUTTON_A_INDEX].current) { keyPush4 = true; }
+            if(this.#gamePad.buttons[this.#gamePad.BUTTON_Y_INDEX].current) { keyPush3 = true; }
+            if(this.#gamePad.buttons[this.#gamePad.BUTTON_B_INDEX].current) { keyPush2 = true; }
+            if(this.#gamePad.buttons[this.#gamePad.BUTTON_X_INDEX].current) { keyPush1 = true; }
+            // etc.
+            if(this.#gamePad.buttons[this.#gamePad.BUTTON_VUP_INDEX].current) { keyUp = true; }
+            if(this.#gamePad.buttons[this.#gamePad.BUTTON_VDOWN_INDEX].current) { keyDown = true; }
+            if(false) { keyDebug = true; }
+        }
+        // キーボードからの入力
+        {
+            // LEVER SWITCH, START, SELECT
+            if(this.#keyboard.isKeyDown(0x71) || this.#keyboard.isKeyDown(0x51)) { keyGameSelect = true; } // 'Q'
+            if(this.#keyboard.isKeyDown(0x61) || this.#keyboard.isKeyDown(0x41)) { keyLever1Left = true; } // 'A'
+            if(this.#keyboard.isKeyDown(0x64) || this.#keyboard.isKeyDown(0x44)) { keyLever1Right = true; } // 'D'
+            if(this.#keyboard.isKeyDown(0x65) || this.#keyboard.isKeyDown(0x45)) { keyGameStart = true; } // 'E'
+            if(this.#keyboard.isKeyDown(0x1B)) { keyGameSelect = true; } // ESC or BREAK
+            if(this.#keyboard.isKeyDown(0x0D)) { keyGameStart = true; } // ENTER
+            // PUSH1～PUSH4
+            if(this.#keyboard.isKeyDown('ArrowLeft')) { keyPush1 = true; }
+            if(this.#keyboard.isKeyDown('ArrowRight')) { keyPush2 = true; }
+            if(this.#keyboard.isKeyDown('ArrowUp')) { keyPush3 = true; }
+            if(this.#keyboard.isKeyDown('ArrowDown')) { keyPush4 = true; }
+            if(this.#keyboard.isKeyDown(0x68) || this.#keyboard.isKeyDown(0x48)) { keyPush1 = true; } // 'H'
+            if(this.#keyboard.isKeyDown(0x6A) || this.#keyboard.isKeyDown(0x4A)) { keyPush2 = true; } // 'J'
+            if(this.#keyboard.isKeyDown(0x6B) || this.#keyboard.isKeyDown(0x4B)) { keyPush3 = true; } // 'K'
+            if(this.#keyboard.isKeyDown(0x6C) || this.#keyboard.isKeyDown(0x4C)) { keyPush4 = true; } // 'L'
+            if(this.#keyboard.isKeyDown(0x20)) { keyPush1 = true; } // ' '
+            // etc.
+            if(this.#keyboard.isKeyDown(0x77) || this.#keyboard.isKeyDown(0x57)) { keyUp = true; } // 'W'
+            if(this.#keyboard.isKeyDown(0x73) || this.#keyboard.isKeyDown(0x53)) { keyDown = true; } // 'S'
+        }
+        // 入力を反映
+        {
             /**
              * K1  K2  K3  K4  K5  K6  K7
              * ----------------------------------------
@@ -208,26 +269,18 @@ export class uPD777 {
              * 1   2   3   4   5   P2  P1   | [A11]
              * LL  L   C   R   RR  6   7    | [A12]
              */
-            const keyGameStart   = (this.#gamePad.buttons[this.#gamePad.BUTTON_START_INDEX].current || this.#gamePad.buttons[this.#gamePad.BUTTON_R3_INDEX].current) ? 0x01 : 0x00;
-            const keyLever1Left  = this.#gamePad.buttons[this.#gamePad.BUTTON_VLEFT_INDEX].current ? 0x02 : 0x00;
-            const keyLever1Right = this.#gamePad.buttons[this.#gamePad.BUTTON_VRIGHT_INDEX].current ? 0x04 : 0x00;
-            const keyGameSelect  = (this.#gamePad.buttons[this.#gamePad.BUTTON_BACK_INDEX].current || this.#gamePad.buttons[this.#gamePad.BUTTON_L3_INDEX].current) ? 0x08 : 0x00;
-            const keyLever2Left  = this.#gamePad.buttons[this.#gamePad.BUTTON_LB_INDEX].current ? 0x02 : 0x00;
-            const keyLever2Right = this.#gamePad.buttons[this.#gamePad.BUTTON_RB_INDEX].current ? 0x04 : 0x00;
-            const keyPush4       = this.#gamePad.buttons[this.#gamePad.BUTTON_A_INDEX].current ? 0x20 : 0x00;
-            const keyPush3       = this.#gamePad.buttons[this.#gamePad.BUTTON_Y_INDEX].current ? 0x40 : 0x00;
-            const keyPush2       = this.#gamePad.buttons[this.#gamePad.BUTTON_B_INDEX].current ? 0x20 : 0x00;
-            const keyPush1       = this.#gamePad.buttons[this.#gamePad.BUTTON_X_INDEX].current ? 0x40 : 0x00;
-            const keyUp          = this.#gamePad.buttons[this.#gamePad.BUTTON_VUP_INDEX].current ? 0x40 : 0x00;
-            const keyDown        = this.#gamePad.buttons[this.#gamePad.BUTTON_VDOWN_INDEX].current ? 0x20 : 0x00;
-            const keyDebug       = false ? 0x80 : 0x00;
-            //
-            const A08Value = keyGameStart | keyLever1Left | keyLever1Right | keyGameSelect;
-            const A09Value = keyLever2Left | keyLever2Right;
-            const A10Value = keyPush4 | keyPush3;
-            const A11Value = keyPush2 | keyPush1;
+            const A08Value = (keyGameStart ? 0x01 : 0x00)
+                            | (keyLever1Left ? 0x02 : 0x00)
+                            | (keyLever1Right ? 0x04 : 0x00)
+                            | (keyGameSelect ? 0x08 : 0x00);
+            const A09Value = (keyLever2Left ? 0x02 : 0x00)
+                            | (keyLever2Right ? 0x04 : 0x00);
+            const A10Value = (keyPush4 ? 0x20 : 0x00) | (keyPush3 ? 0x40 : 0x00);
+            const A11Value = (keyPush2 ? 0x20 : 0x00) | (keyPush1 ? 0x40 : 0x00);
             const A12Value = 0;
-            const SpecialValue = keyUp | keyDown | keyDebug;
+            const SpecialValue = (keyUp ? 0x40 : 0x00)
+                            | (keyDown ? 0x20 : 0x00)
+                            | (keyDebug ? 0x80 : 0x00);
             this.wasm.setKeyStatus(0, A08Value); // A08
             this.wasm.setKeyStatus(1, A09Value); // A09
             this.wasm.setKeyStatus(2, A10Value); // A10
