@@ -16,6 +16,11 @@ class WinPD777 : public PD777 {
     KeyStatus keyStatus;
 
     /**
+     * @brief キーボードの状態
+     */
+    u8 keyboardState[256];
+
+    /**
      * @brief パドル1～パドル4の値
      */
     f32 padValue[4] = {};
@@ -99,6 +104,7 @@ public:
     bool targetDependentSetup(HWND hwnd);
 
     void onPaint(HWND hwnd);
+    void onKey();
     bool isFinish() const { return finished; }
     void setFinish() { finished = true; }
     /**

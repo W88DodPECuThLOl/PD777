@@ -97,6 +97,12 @@ WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
                 cpu->onPaint(hwnd);
             }
             return 0;
+        case WM_KEYDOWN:
+        case WM_KEYUP:
+            if(WinPD777* cpu = reinterpret_cast<WinPD777*>(::GetWindowLongPtr(hwnd, GWLP_USERDATA)); cpu) [[likely]] {
+                cpu->onKey();
+            }
+            break;
     }
     return DefWindowProc( hwnd, uMsg, wParam, lParam );
 }
@@ -168,6 +174,7 @@ main()
 
     // ゲームスレッドを立ち上げ
     std::thread gameThread(gameThreadEntry, reinterpret_cast<std::uintptr_t>(cpu.get()));
+
     // ウィンドウのメッセージループ
     int rc = window->messageLoop();
 

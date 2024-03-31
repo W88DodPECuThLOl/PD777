@@ -310,59 +310,110 @@ WinPD777::updateKey()
 {
     keyStatus.clear();
 
+    bool start = false;
+    bool leverSwitch1Left = false;
+    bool leverSwitch1Right = false;
+    bool select = false;
+    bool leverSwitch2Left = false;
+    bool leverSwitch2Right = false;
+    bool push4 = false;
+    bool push3 = false;
+    bool push2 = false;
+    bool push1 = false;
+    bool up = false;
+    bool down = false;
+    bool debug = false;
+
+    // キーボード
+    {
+        // LEVER SWITCH, START, SELECT
+        if(keyboardState['Q'] & 0x80) [[unlikely]] { select = true; }
+        if(keyboardState['E'] & 0x80) [[unlikely]] { start = true; }
+        if(keyboardState['A'] & 0x80) [[unlikely]] { leverSwitch1Left = true; }
+        if(keyboardState['D'] & 0x80) [[unlikely]] { leverSwitch1Right = true; }
+        if(keyboardState[VK_ESCAPE]&0x80) [[unlikely]] { select = true; }
+        if(keyboardState[VK_RETURN]&0x80) [[unlikely]] { start = true; }
+        // PUSH1～PUSH4
+        if(keyboardState[VK_LEFT] & 0x80) [[unlikely]] { push1 = true; }
+        if(keyboardState[VK_RIGHT] & 0x80) [[unlikely]] { push2 = true; }
+        if(keyboardState[VK_UP] & 0x80) [[unlikely]] { push3 = true; }
+        if(keyboardState[VK_DOWN] & 0x80) [[unlikely]] { push4 = true; }
+        if(keyboardState['H'] & 0x80) [[unlikely]] { push1 = true; }
+        if(keyboardState['J'] & 0x80) [[unlikely]] { push2 = true; }
+        if(keyboardState['K'] & 0x80) [[unlikely]] { push3 = true; }
+        if(keyboardState['L'] & 0x80) [[unlikely]] { push4 = true; }
+        if(keyboardState[VK_SPACE] & 0x80) [[unlikely]] { push1 = true; }
+        // CourseSwitch
+        if(keyboardState['1']) [[unlikely]] { setCourseSwitch(1); }
+        if(keyboardState['2']) [[unlikely]] { setCourseSwitch(2); }
+        if(keyboardState['3']) [[unlikely]] { setCourseSwitch(3); }
+        if(keyboardState['4']) [[unlikely]] { setCourseSwitch(4); }
+        if(keyboardState['5']) [[unlikely]] { setCourseSwitch(5); }
+        // etc.
+        if(keyboardState['W'] & 0x80) [[unlikely]] { up = true; }
+        if(keyboardState['S'] & 0x80) [[unlikely]] { down = true; }
+    }
+
     s32 gamePadIndex = 0;
     static cat::core::pad::GamePadButtonState prevButtons = 0;
     cat::core::pad::GamePadState gamePadState;
     cat::core::pad::getPadState(gamePadIndex, &gamePadState);
-    if(!gamePadState.isControllerConnected()) {
-        return; // コントローラが接続されていなかった
-    }
-    const auto current     = gamePadState.buttons;
-    const auto edge        = current ^ prevButtons;
-    const auto risingEdge  = edge &  current;
-    const auto fallingEdge = edge & ~current;
-    prevButtons = current;
+    if(gamePadState.isControllerConnected()) {
+        const auto current     = gamePadState.buttons;
+        const auto edge        = current ^ prevButtons;
+        const auto risingEdge  = edge &  current;
+        const auto fallingEdge = edge & ~current;
+        prevButtons = current;
 
-    // メモ）コーススイッチをデジタルパッドの上下で切り替える
-    {
-        u8 courseSwitch = getCourseSwitch();
-        if(fallingEdge & cat::core::pad::ButtonMask::DPAD_UP) {
-            if(courseSwitch < 5) {
-                courseSwitch++;
-                setCourseSwitch(courseSwitch);
+        // メモ）コーススイッチをデジタルパッドの上下で切り替える
+        {
+            u8 courseSwitch = getCourseSwitch();
+            if(fallingEdge & cat::core::pad::ButtonMask::DPAD_UP) {
+                if(courseSwitch < 5) {
+                    courseSwitch++;
+                    setCourseSwitch(courseSwitch);
+                }
+            }
+            if(fallingEdge & cat::core::pad::ButtonMask::DPAD_DOWN) {
+                if(courseSwitch > 1) {
+                    courseSwitch--;
+                    setCourseSwitch(courseSwitch);
+                }
             }
         }
-        if(fallingEdge & cat::core::pad::ButtonMask::DPAD_DOWN) {
-            if(courseSwitch > 1) {
-                courseSwitch--;
-                setCourseSwitch(courseSwitch);
-            }
-        }
+    /*
+        padValue[0] = clamp(padValue[0] - gamePadState.analogs[0].y * 0.03f, PAD_MIN_VALUE, PAD_MAX_VALUE);
+        padValue[1] = clamp(padValue[1] + gamePadState.analogs[0].x * 0.03f, PAD_MIN_VALUE, PAD_MAX_VALUE);
+        padValue[2] = clamp(padValue[2] + gamePadState.analogs[1].x * 0.03f, PAD_MIN_VALUE, PAD_MAX_VALUE);
+        padValue[3] = clamp(padValue[3] - gamePadState.analogs[1].y * 0.03f, PAD_MIN_VALUE, PAD_MAX_VALUE);
+    */
+
+        // 
+        // PUSH1 : X
+        // PUSH2 : B
+        // PUSH3 : Y
+        // PUSH4 : A
+        // 
+
+        start = start || (current & (cat::core::pad::ButtonMask::START | cat::core::pad::ButtonMask::RIGHT_THUMB));
+        leverSwitch1Left = leverSwitch1Left || ((current & cat::core::pad::ButtonMask::DPAD_LEFT) || (gamePadState.analogs[0].x < -0.3f));
+        leverSwitch1Right = leverSwitch1Right || ((current & cat::core::pad::ButtonMask::DPAD_RIGHT) || (gamePadState.analogs[0].x > 0.3f));
+        select = select || (current & (cat::core::pad::ButtonMask::BACK | cat::core::pad::ButtonMask::LEFT_THUMB));
+        leverSwitch2Left = leverSwitch2Left || (current & cat::core::pad::ButtonMask::LEFT_SHOULDER);
+        leverSwitch2Right = leverSwitch2Right || (current & cat::core::pad::ButtonMask::RIGHT_SHOULDER);
+        push4 = push4 || (current & cat::core::pad::ButtonMask::A);
+        push3 = push3 || (current & cat::core::pad::ButtonMask::Y);
+        push2 = push2 || (current & cat::core::pad::ButtonMask::B);
+        push1 = push1 || (current & cat::core::pad::ButtonMask::X);
+        // ４方向使用するときの上
+        up = up || ((current & cat::core::pad::ButtonMask::DPAD_UP) || (gamePadState.analogs[0].y > 0.3f));
+        // ４方向使用するときの下
+        down = down || ((current & cat::core::pad::ButtonMask::DPAD_DOWN) || (gamePadState.analogs[0].y < -0.3f));
+        // デバッグモード
+        debug = debug || false;
+    } else {
+        // コントローラが接続されていなかった
     }
-/*
-    padValue[0] = clamp(padValue[0] - gamePadState.analogs[0].y * 0.03f, PAD_MIN_VALUE, PAD_MAX_VALUE);
-    padValue[1] = clamp(padValue[1] + gamePadState.analogs[0].x * 0.03f, PAD_MIN_VALUE, PAD_MAX_VALUE);
-    padValue[2] = clamp(padValue[2] + gamePadState.analogs[1].x * 0.03f, PAD_MIN_VALUE, PAD_MAX_VALUE);
-    padValue[3] = clamp(padValue[3] - gamePadState.analogs[1].y * 0.03f, PAD_MIN_VALUE, PAD_MAX_VALUE);
-*/
-
-    // 
-    // PUSH1 : X
-    // PUSH2 : B
-    // PUSH3 : Y
-    // PUSH4 : A
-    // 
-
-    const bool start  = current & (cat::core::pad::ButtonMask::START | cat::core::pad::ButtonMask::RIGHT_THUMB);
-    const bool leverSwitch1Left = (current & cat::core::pad::ButtonMask::DPAD_LEFT) || (gamePadState.analogs[0].x < -0.3f);
-    const bool leverSwitch1Right = (current & cat::core::pad::ButtonMask::DPAD_RIGHT) || (gamePadState.analogs[0].x > 0.3f);
-    const bool select = current & (cat::core::pad::ButtonMask::BACK | cat::core::pad::ButtonMask::LEFT_THUMB);
-    const bool leverSwitch2Left = current & cat::core::pad::ButtonMask::LEFT_SHOULDER;
-    const bool leverSwitch2Right = current & cat::core::pad::ButtonMask::RIGHT_SHOULDER;
-    const bool push4 = current & cat::core::pad::ButtonMask::A;
-    const bool push3 = current & cat::core::pad::ButtonMask::Y;
-    const bool push2 = current & cat::core::pad::ButtonMask::B;
-    const bool push1 = current & cat::core::pad::ButtonMask::X;
 
     // [A08]
     if(start) { keyStatus.setGameStartKey(); }
@@ -395,15 +446,15 @@ WinPD777::updateKey()
     //
 
     // ４方向使用するときの上
-    if((current & cat::core::pad::ButtonMask::DPAD_UP) || (gamePadState.analogs[0].y > 0.3f)) {
+    if(up) {
         keyStatus.setUp();
     }
     // ４方向使用するときの下
-    if((current & cat::core::pad::ButtonMask::DPAD_DOWN) || (gamePadState.analogs[0].y < -0.3f)) {
+    if(down) {
         keyStatus.setDown();
     }
     // デバッグモード
-    if(false) {
+    if(debug) {
         keyStatus.setDebugMode();
     }
 }
@@ -429,6 +480,7 @@ WinPD777::WinPD777()
     , image(new WinImage())
 {
     PD777::init();
+    for(auto& e : keyboardState) { e = 0; }
 }
 
 bool
@@ -458,4 +510,10 @@ void
 WinPD777::onPaint(HWND hwnd)
 {
     image->onPaint(hwnd);
+}
+
+void
+WinPD777::onKey()
+{
+    GetKeyboardState(keyboardState);
 }

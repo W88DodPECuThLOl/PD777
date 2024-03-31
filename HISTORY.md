@@ -10,6 +10,25 @@
 * 「VIDEO GAME TEST DISPLAY」をデフォルトに
 * NRMレジスタ関連を整理中
 
+入力
+* キーボード入力に対応
+
+| キー | キーボード  |
+|------|------------|
+| LEVER SWITCH 1 LEFT | A |
+| LEVER SWITCH 1 RIGHT | D |
+| SELECT | Q |
+| START | E |
+| PUSH1 | H |
+| PUSH2 | J |
+| PUSH3 | K |
+| PUSH4 | L |
+| COURSE SWITCH LL | 1 |
+| COURSE SWITCH L | 2 |
+| COURSE SWITCH C | 3 |
+| COURSE SWITCH R | 4 |
+| COURSE SWITCH RR | 5 |
+
 WASM
 * 実験中
 * 入力を実装
