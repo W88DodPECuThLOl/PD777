@@ -165,7 +165,7 @@ class GainProcessor extends AudioWorkletProcessor {
 			for(let ch = 0; ch < 2; ++ch) {
                 let src = this.#sourceInfo[ch];
                 if(src.freq > 0.0) {
-                    let v = (src.phase > 3.141592653) ? 0.0 : 0.08;
+                    let v = (src.phase > 3.141592653) ? 0.0 : 0.12;
                     const step = src.freq *(2.0*3.141592653) / this.#getSamplesPerSec();
                     src.phase += step;
 					while(src.phase > 2.0 * 3.141592653) {
@@ -179,7 +179,7 @@ class GainProcessor extends AudioWorkletProcessor {
                         }
                     }
                     // 合成
-                    value += v;
+					value += v * ((ch == 1) ? 0.25 : 1.0);
                 }
             }
 			value *= this.#masterVolume;
