@@ -70,6 +70,7 @@ public:
 				src.mtxScore.unlock();
 			}
 
+			int ch = 0;
 			double output = 0.0;
 			for(auto& src : source) {
 				if(src.freq > 1) {
@@ -84,10 +85,11 @@ public:
 						}
 					}
 					// 合成
-					output += v;
+					output += v * ((ch == 1) ? 0.25 : 1.0);
 				}
+				ch++;
 			}
-			*buf++ = output * 0.5 * 32767.0 * 0.02;
+			*buf++ = output * 0.5 * 32767.0 * 0.04;
 			size -= 2;
 		}
 		return readSize;
