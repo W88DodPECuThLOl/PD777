@@ -3,7 +3,7 @@
 ## verX.XX.XX
 
 サウンド
-* FRSの音量をFLSよりも小さく #2
+* https://github.com/W88DodPECuThLOl/PD777/issues/2 FRSの音量をFLSよりも小さく
 
 ## ver0.03.31
 
