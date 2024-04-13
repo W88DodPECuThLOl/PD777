@@ -2052,8 +2052,8 @@ PD777::execJS(const u16 pc, const u16 code)
 void
 PD777::init()
 {
-    setupRom();
-    setupCGRom();
+    setupCode();
+    setupPattern();
     crt.reset();
     stack.reset();
     regs.reset();

@@ -2,6 +2,9 @@
 
 ## verX.XX.XX
 
+コア
+* https://github.com/W88DodPECuThLOl/PD777/issues/1 drag & dropでファイルを読み込むように
+
 サウンド
 * https://github.com/W88DodPECuThLOl/PD777/issues/2 FRSの音量をFLSよりも小さく
 

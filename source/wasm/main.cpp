@@ -121,13 +121,13 @@ setupAuto(const void* data, const size_t dataSize)
 bool
 setupCode(const void* data, const size_t dataSize)
 {
-    return cpu && cpu->setupRom(data, dataSize);
+    return cpu && cpu->setupCode(data, dataSize);
 }
 
 bool
 setupPattern(const void* data, const size_t dataSize)
 {
-    return cpu && cpu->setupCGRom(data, dataSize);
+    return cpu && cpu->setupPattern(data, dataSize);
 }
 
 bool
@@ -202,6 +202,9 @@ memoryAllocate(const s32 size)
 {
     return new u8[size];
 }
+
+
+
 
 void
 memoryFree(u8* ptr)

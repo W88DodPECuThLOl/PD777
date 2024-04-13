@@ -85,6 +85,27 @@ loadBinaryFile(const std::wstring& filename)
     return std::nullopt;
 }
 
+std::optional<std::vector<u8>>
+loadBinaryFile(const std::string& filename)
+{
+    if(filename.empty()) {
+        return std::nullopt;
+    }
+    if(std::unique_ptr<FILE, decltype(&fclose)> fp(fopen(filename.c_str(), "rb"), &fclose); fp) [[likely]] {
+        if(fseek(fp.get(), 0, SEEK_END) == 0) [[likely]] {
+            if(auto fileSize = ftell(fp.get()); fileSize > 0) [[likely]] {
+                if(fseek(fp.get(), 0, SEEK_SET) == 0) [[likely]] {
+                    std::vector<u8> data(fileSize);
+                    if(fread(data.data(), 1, data.size(), fp.get()) == data.size()) [[likely]] {
+                        return std::move(data);
+                    }
+                }
+            }
+        }
+    }
+    return std::nullopt;
+}
+
 LRESULT CALLBACK
 WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
@@ -101,6 +122,27 @@ WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
         case WM_KEYUP:
             if(WinPD777* cpu = reinterpret_cast<WinPD777*>(::GetWindowLongPtr(hwnd, GWLP_USERDATA)); cpu) [[likely]] {
                 cpu->onKey();
+            }
+            break;
+        case WM_DROPFILES:
+            {
+                HDROP hdrop = (HDROP)wParam;
+                //ドロップされたFile数
+                UINT num = DragQueryFile(hdrop, -1, NULL, 0);
+
+                TCHAR filename[MAX_PATH];
+                for(UINT i = 0; i < num; i++) {
+                    DragQueryFile(hdrop, i, filename, MAX_PATH);
+                    //TODO: filenameにDrag DropしたファイルのフルPathが入っているので、処理をする
+
+                    std::optional<std::vector<u8>> data = loadBinaryFile(filename);
+                    if(!!data) [[likely]] {
+                        if(WinPD777* cpu = reinterpret_cast<WinPD777*>(::GetWindowLongPtr(hwnd, GWLP_USERDATA)); cpu) [[likely]] {
+                            cpu->setupAuto(data);
+                        }
+                    }
+                }
+                DragFinish(hdrop);
             }
             break;
     }

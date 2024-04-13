@@ -83,11 +83,17 @@ protected:
     // VBLK命令呼び出されたフラグ
     bool calledVBLK = false;
 private:
-    bool setupRomRawAddress(const void* data, size_t dataSize);
-    bool setupRomRawOrder(const void* data, size_t dataSize);
-    bool setupRomFormatted(const void* data, size_t dataSize);
-    bool setupCGRomRawBitStream(const void* data, size_t dataSize);
-    bool setupCGRomFormatted(const void* data, size_t dataSize);
+    bool isCodeRawOrder(const void* codeData,  const size_t codeDataSize) const;
+    bool isCodeFormatted(const void* codeData,  const size_t codeDataSize) const;
+    bool setupCodeRawAddress(const void* data, size_t dataSize);
+    bool setupCodeRawOrder(const void* data, const size_t dataSize);
+    bool setupCodeFormatted(const void* data, size_t dataSize);
+    bool isPatternRaw(const void* patternData, const size_t patternDataSize) const;
+    bool isPatternFormatted(const void* patternData, const size_t patternDataSize) const;
+    bool isPatternRawBitStream(const void* patternData, const size_t patternDataSize) const;
+    bool setupPatternRaw(const void* patternData, const size_t patternDataSize);
+    bool setupCGRomRawBitStream(const void* patternData, const size_t patternDataSize);
+    bool setupCGRomFormatted(const void* patternData, const size_t patternDataSize);
 private:
     /**
      * @brief ドットの形状
@@ -457,21 +463,38 @@ public:
     virtual void init();
 
     /**
-     * @brief   romをセットアップする
+     * @brief   対応しているコードデータかどうか
      * 
-     * @param[in]   data        データ
-     * @param[in]   dataSize    データサイズ(バイト単位)
+     * @param[in]   codeData        コードデータ
+     * @param[in]   codeDataSize    コードデータサイズ(バイト単位)
+     * @return  対応していたらtrueを返す
+     */
+    bool isCodeData(const void* codeData, const size_t codeDataSize) const;
+    /**
+     * @brief   コードをセットアップする
+     * 
+     * @param[in]   codeData        コードデータ
+     * @param[in]   codeDataSize    コードデータサイズ(バイト単位)
      * @return  成功したらtrueを返す
      */
-    bool setupRom(const void* data = nullptr, size_t dataSize = 0);
+    bool setupCode(const void* codeData = nullptr, size_t codeDataSize = 0);
+
+    /**
+     * @brief   対応しているパターンデータかどうか
+     * 
+     * @param[in]   patternData     パターンデータ
+     * @param[in]   patternDataSize パターンデータサイズ(バイト単位)
+     * @return  対応していたらtrueを返す
+     */
+    bool isPatternData(const void* patternData, const size_t patternDataSize) const;
     /**
      * @brief   cgromをセットアップする
      * 
-     * @param[in]   data        データ
-     * @param[in]   dataSize    データサイズ(バイト単位)
+     * @param[in]   patternData     パターンデータ
+     * @param[in]   patternDataSize パターンデータサイズ(バイト単位)
      * @return  成功したらtrueを返す
      */
-    bool setupCGRom(const void* data = nullptr, size_t dataSize = 0);
+    bool setupPattern(const void* patternData = nullptr, size_t patternDataSize = 0);
 
     /**
      * @brief 終了処理

@@ -112,6 +112,9 @@ getSound(const std::int64_t clockCounter)
         decoder->resetInnerClock(clockCounter);
         sound = gAudio->play(decoder, 0);
     }
+    if(clockCounter < 0) {
+        decoder->resetInnerClock(0);
+    }
     return decoder;
 }
 
@@ -160,7 +163,7 @@ WinPD777::present()
         LARGE_INTEGER mTimeEnd;
         QueryPerformanceCounter(&mTimeEnd);
         auto mFrameTime = static_cast<double>(mTimeEnd.QuadPart - mTimeStart.QuadPart) / static_cast<double>(mTimeFreq.QuadPart);
-        if (mFrameTime < FRAME_TIME)
+        if (0 < mFrameTime && mFrameTime < FRAME_TIME)
         {
             DWORD sleepTime = static_cast<DWORD>((FRAME_TIME - mFrameTime) * 1000);
             timeBeginPeriod(1);
@@ -172,6 +175,11 @@ WinPD777::present()
 
     // キー入力の更新
     updateKey();
+
+    if(isRequestReset()) {
+        this->resetRequest = false;
+        reset();
+    }
 }
 
 void
@@ -303,6 +311,20 @@ void
 WinPD777::readKIN(KeyStatus& key)
 {
     key = keyStatus;
+}
+
+void
+WinPD777::reset()
+{
+    crt.reset();
+    stack.reset();
+    regs.reset();
+    sound.reset();
+    gun.reset();
+    calledVBLK = false;
+    // 開始時間の初期化
+    mTimeStart.QuadPart = 0;
+    getSound(-1);
 }
 
 void
@@ -484,15 +506,41 @@ WinPD777::WinPD777()
 }
 
 bool
-WinPD777::setup(const std::optional<std::vector<u8>>& codeData, const std::optional<std::vector<u8>>& cgData)
+WinPD777::setup(const std::optional<std::vector<u8>>& codeData, const std::optional<std::vector<u8>>& ptnData)
 {
-    if(codeData && !setupRom(codeData.value().data(), codeData.value().size())) {
-        return false; // 設定に失敗した
+    bool result = true;
+    if(codeData) {
+        if(!setupCode(codeData.value().data(), codeData.value().size())) {
+            result = false; // 設定に失敗した
+        }
     }
-    if(cgData && !setupCGRom(cgData.value().data(), cgData.value().size())) {
-        return false; // 設定に失敗した
+    if(ptnData) {
+        if(!setupPattern(ptnData.value().data(), ptnData.value().size())) {
+            result = false; // 設定に失敗した
+        }
     }
-    return true;
+    return result;
+}
+
+bool
+WinPD777::setupAuto(const std::optional<std::vector<u8>>& data)
+{
+    if(isPatternData(data.value().data(), data.value().size())) {
+        if(setupPattern(data.value().data(), data.value().size())) {
+            ptnData = data;
+            return true; // 成功
+        }
+    }
+    if(isCodeData(data.value().data(), data.value().size())) {
+        codeData = data;
+        // コードからパターンの順番に設定しないとベントパターンが確定できないので、コードとパターンを一緒に設定する
+        if(setup(codeData, ptnData)) {
+            // 設定に成功したらリセットする
+            requestReset();
+            return true; // 成功
+        }
+    }
+    return false; // 失敗
 }
 
 bool
@@ -503,6 +551,8 @@ WinPD777::targetDependentSetup(HWND hwnd)
     mTimeStart.QuadPart = 0;
     // サウンド初期化
     getSound(0);
+    // ドラッグ アンド ドロップを有効に
+    DragAcceptFiles(hwnd, TRUE);
     return true;
 }
 

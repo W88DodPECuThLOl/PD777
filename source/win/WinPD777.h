@@ -11,6 +11,14 @@ class WinPD777 : public PD777 {
     bool finished = false;
 
     /**
+     * @brief リセット要求フラグ
+     * 
+     * trueならリセットする。
+     * リセット後クリアされる。
+     */
+    bool resetRequest = false;
+
+    /**
      * @brief キー入力の状態
      */
     KeyStatus keyStatus;
@@ -18,7 +26,7 @@ class WinPD777 : public PD777 {
     /**
      * @brief キーボードの状態
      */
-    u8 keyboardState[256];
+    u8 keyboardState[256] {};
 
     /**
      * @brief パドル1～パドル4の値
@@ -81,6 +89,12 @@ class WinPD777 : public PD777 {
          */
         bool isHit() const { return hit; }
         void setHit(const bool isHit) { this->hit = isHit; }
+
+        void reset() {
+            enableGun = false;
+            hit = false;
+            drawGunTarget = true;
+        }
     };
     /**
      * @brief 光線銃
@@ -91,16 +105,44 @@ class WinPD777 : public PD777 {
      * @brief コーススイッチ（1～5）
      */
     u8 courseSwitch = 3;
+
+    /**
+     * @brief コードデータ
+     */
+    std::optional<std::vector<u8>> codeData;
+    /**
+     * @brief パターンデータ
+     */
+    std::optional<std::vector<u8>> ptnData;
+
+
     /**
      * @brief コーススイッチを取得する
      * @return コーススイッチ（1～5）
      */
     u8 getCourseSwitch() const { return courseSwitch; }
     void updateKey();
+
+    /**
+     * @brief リセットする
+     * 
+     * リセット後、リセット要求フラグはクリアされる。
+     */
+    void reset();
+
+    /**
+     * @brief リセット要求がきているかどうか
+     * 
+     * @return  リセット要求がきているかどうか
+     * @retval  true:   リセット要求あり
+     * @retval  false:  リセット要求なし
+     */
+    bool isRequestReset() const noexcept { return resetRequest; }
 public:
     WinPD777();
 
-    bool setup(const std::optional<std::vector<u8>>& codeData, const std::optional<std::vector<u8>>& cgData);
+    bool setup(const std::optional<std::vector<u8>>& codeData, const std::optional<std::vector<u8>>& ptnData);
+    bool setupAuto(const std::optional<std::vector<u8>>& data);
     bool targetDependentSetup(HWND hwnd);
 
     void onPaint(HWND hwnd);
@@ -112,6 +154,11 @@ public:
      * @param[in]   courseSwitch    コーススイッチ（1～5）
      */
     void setCourseSwitch(const u8 courseSwitch) { this->courseSwitch = courseSwitch; }
+
+    /**
+     * @brief リセット要求する
+     */
+    void requestReset() { resetRequest = true; }
 protected:
     // grah
     virtual void present() override;

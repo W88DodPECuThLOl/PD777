@@ -95,7 +95,7 @@ getBit(const void* data, const u32 pos)
 } // namespace
 
 bool
-PD777::setupRomRawAddress(const void* data, size_t dataSize)
+PD777::setupCodeRawAddress(const void* data, size_t dataSize)
 {
     for(auto& r : rom) { r = ~0; }
 
@@ -108,14 +108,24 @@ PD777::setupRomRawAddress(const void* data, size_t dataSize)
 }
 
 bool
-PD777::setupRomRawOrder(const void* data, size_t dataSize)
+PD777::isCodeRawOrder(const void* codeData,  const size_t codeDataSize) const
 {
+    return (codeData != nullptr) && (codeDataSize == 0xF00);
+}
+
+bool
+PD777::setupCodeRawOrder(const void* codeData, const size_t codeDataSize)
+{
+    if(!isCodeRawOrder(codeData, codeDataSize)) {
+        return false;
+    }
+
     for(auto index = 0x780; index < 0x7FF; ++index) { rom[index] = 0; }
     rom[0x7FF] = ~0;
 
-    const u8* byteData = (const u8*)data;
+    const u8* byteData = (const u8*)codeData;
     u16 pc = 0;
-    for(auto index = 0; index < dataSize; index += 2) {
+    for(auto index = 0; index < codeDataSize; index += 2) {
         const u16 code = (((u16)byteData[index+0] << 8) | (u16)byteData[index+1]);
         rom[pc++] = code;
     }
@@ -126,8 +136,36 @@ PD777::setupRomRawOrder(const void* data, size_t dataSize)
 }
 
 bool
-PD777::setupRomFormatted(const void* data, size_t dataSize)
+PD777::isCodeFormatted(const void* codeData,  const size_t codeDataSize) const
 {
+    if((codeData == nullptr) || (codeDataSize < 0x100)) {
+        return false;
+    }
+
+    // マジックナンバー + バージョン
+    const u8* header = (const u8*)codeData;
+    c8 magicNumber[] = u8"_CassetteVision_000";
+    for(auto i = 0; i < 19; ++i) {
+        if(header[i] != magicNumber[i]) [[unlikely]] {
+            return false;
+        }
+    }
+    if(header[19] == '0') {
+        return true; // Ver0
+    } else if(header[19] == '1') {
+        return true; // Ver1
+    } else {
+        return false; // 不明なバージョン
+    }
+}
+
+bool
+PD777::setupCodeFormatted(const void* data, size_t dataSize)
+{
+    if(!isCodeFormatted(data, dataSize)) {
+        return false;
+    }
+
     for(auto& r : rom) { r = ~0; }
 
     // ヘッダ部分
@@ -179,8 +217,26 @@ PD777::setupRomFormatted(const void* data, size_t dataSize)
 }
 
 bool
-PD777::setupRom(const void* data, size_t dataSize)
+PD777::isCodeData(const void* codeData, const size_t codeDataSize) const
 {
+    if(isCodeRawOrder(codeData, codeDataSize)) {
+        return true; // 順番に並んだコード
+    } else if(codeData == nullptr) {
+        return true; // アドレス、コードの順に並んだコード
+    } else if(isCodeFormatted(codeData, codeDataSize)) {
+        return true; // フォーマットされたコード
+    } else {
+        return false; // 未対応
+    }
+}
+
+bool
+PD777::setupCode(const void* data, size_t dataSize)
+{
+    if(!isCodeData(data, dataSize)) {
+        return false;
+    }
+
     for(auto& r : rom) { r = ~0; }
     keyMapping.bitMap[0] = 0x40;            // B09 => K7
     keyMapping.bitMap[1] = 0x20;            // B10 => K6
@@ -190,15 +246,15 @@ PD777::setupRom(const void* data, size_t dataSize)
     keyMapping.bitMap[5] = 0x02;            // B14 => K2
     keyMapping.bitMap[6] = 0x01;            // B15 => K1
 
-    if(data != nullptr && dataSize == 0xF00) {
+    if(isCodeRawOrder(data, dataSize)) {
         // 順番に並んだコード
-        if(!setupRomRawOrder(data, dataSize)) [[unlikely]] { return false; }
+        if(!setupCodeRawOrder(data, dataSize)) [[unlikely]] { return false; }
     } else if(data == nullptr) {
         // アドレス、コードの順に並んだコード
-        if(!setupRomRawAddress(data, dataSize)) [[unlikely]] { return false; }
-    } else if(data != nullptr && dataSize >= 0x100) {
+        if(!setupCodeRawAddress(data, dataSize)) [[unlikely]] { return false; }
+    } else if(isCodeFormatted(data, dataSize)) {
         // フォーマットされたコード
-        if(!setupRomFormatted(data, dataSize)) [[unlikely]] { return false; }
+        if(!setupCodeFormatted(data, dataSize)) [[unlikely]] { return false; }
     } else {
         // 未対応
         return false;
@@ -334,8 +390,22 @@ PD777::setupRom(const void* data, size_t dataSize)
 }
 
 bool
-PD777::setupCGRomRawBitStream(const void* data, size_t dataSize)
+PD777::isPatternRawBitStream(const void* patternData, const size_t patternDataSize) const
 {
+    return (patternData != nullptr) && (patternDataSize == 0x4D0);
+}
+
+bool
+PD777::setupCGRomRawBitStream(const void* patternData, const size_t patternDataSize)
+{
+    if(!isPatternRawBitStream(patternData, patternDataSize)) {
+        return false;
+    }
+
+    for(auto& r : patternCGRom7x7) { r = 0; }
+    for(auto& r : patternCGRom8x7) { r = 0; }
+    for(auto& r : characterBent)   { r = 0xFF; }
+
     // 7x7
     u8* ptn = patternCGRom7x7;
     for(auto ptnNo = 0; ptnNo < 0x70; ++ptnNo) {
@@ -345,7 +415,7 @@ PD777::setupCGRomRawBitStream(const void* data, size_t dataSize)
         for(int y = 0; y < 7; y++) {
             u8 ptnData = 0;
             for(int x = 0; x < 8; x++) {
-                bool flag = getBit(data, 3 + x + 11 * y + (ptnNo * 77));
+                bool flag = getBit(patternData, 3 + x + 11 * y + (ptnNo * 77));
                 if(flag) {
                     ptnData |= (0x80 >> x);
                 }
@@ -362,7 +432,7 @@ PD777::setupCGRomRawBitStream(const void* data, size_t dataSize)
         for(int y = 0; y < 7; y++) {
             u8 ptnData = 0;
             for(int x = 0; x < 8; x++) {
-                bool flag = getBit(data, 3 + x + 11 * y + (ptnNo * 77));
+                bool flag = getBit(patternData, 3 + x + 11 * y + (ptnNo * 77));
                 if(flag) {
                     ptnData |= (0x80 >> x);
                 }
@@ -388,12 +458,39 @@ PD777::setupCGRomRawBitStream(const void* data, size_t dataSize)
 }
 
 bool
-PD777::setupCGRomFormatted(const void* data, size_t dataSize)
+PD777::isPatternFormatted(const void* patternData, const size_t patternDataSize) const
 {
+    if(patternData == nullptr) {
+        return false;
+    }
+    if(patternDataSize != 0x340) {
+        return false;
+    }
+
+    // マジックナンバー + バージョン
+    const u8* header = (const u8*)patternData;
+    c8 magicNumber[] = u8"*CassetteVision*0000";
+    for(auto i = 0; i < 20; ++i) {
+        if(header[i] != magicNumber[i]) return false;
+    }
+    return false;
+}
+
+bool
+PD777::setupCGRomFormatted(const void* patternData, const size_t patternDataSize)
+{
+    if(!isPatternFormatted(patternData, patternDataSize)) {
+        return false;
+    }
+
+    for(auto& r : patternCGRom7x7) { r = 0; }
+    for(auto& r : patternCGRom8x7) { r = 0; }
+    for(auto& r : characterBent)   { r = 0xFF; }
+
     // ヘッダ部分
     {
         // マジックナンバー + バージョン
-        const u8* header = (const u8*)data;
+        const u8* header = (const u8*)patternData;
         c8 magicNumber[] = u8"*CassetteVision*0000";
         for(auto i = 0; i < 20; ++i) {
             if(header[i] != magicNumber[i]) return false;
@@ -415,7 +512,7 @@ PD777::setupCGRomFormatted(const void* data, size_t dataSize)
     }
     // パターン部分
     {
-        const u8* ptn = ((const u8*)data + 0x030);
+        const u8* ptn = ((const u8*)patternData + 0x030);
         for(auto i = 0; i < 686; ++i) { patternCGRom7x7[i] = *ptn++; }
         for(auto i = 0; i <  98; ++i) { patternCGRom8x7[i] = *ptn++; }
     }
@@ -423,23 +520,47 @@ PD777::setupCGRomFormatted(const void* data, size_t dataSize)
 }
 
 bool
-PD777::setupCGRom(const void* data, size_t dataSize)
+PD777::isPatternRaw(const void* patternData, const size_t patternDataSize) const
 {
-    if(data != nullptr && dataSize == 0x340) {
-        for(auto& r : patternCGRom7x7) { r = 0; }
-        for(auto& r : patternCGRom8x7) { r = 0; }
-        for(auto& r : characterBent)   { r = 0xFF; }
-        return setupCGRomFormatted(data, dataSize);
-    } else if(data != nullptr && dataSize == 0x4D0) {
-        for(auto& r : patternCGRom7x7) { r = 0; }
-        for(auto& r : patternCGRom8x7) { r = 0; }
-        for(auto& r : characterBent)   { r = 0xFF; }
-        return setupCGRomRawBitStream(data, dataSize);
-    } else if(data == nullptr) {
-        for(auto i = 0; i < 686; ++i) { patternCGRom7x7[i] = patternRom[i]; }
-        for(auto i = 0; i <  98; ++i) { patternCGRom8x7[i] = patternRom8[i]; }
-        for(auto i = 0; i < 256; ++i) { characterBent[i]   = characterAttribute[i]; }
+    return patternData == nullptr;
+}
+
+bool
+PD777::setupPatternRaw(const void* patternData, const size_t patternDataSize)
+{
+    if(!isPatternRaw(patternData, patternDataSize)) {
+        return false;
+    }
+
+    for(auto i = 0; i < 686; ++i) { patternCGRom7x7[i] = patternRom[i]; }
+    for(auto i = 0; i <  98; ++i) { patternCGRom8x7[i] = patternRom8[i]; }
+    for(auto i = 0; i < 256; ++i) { characterBent[i]   = characterAttribute[i]; }
+    return true;
+}
+
+bool
+PD777::isPatternData(const void* patternData, const size_t patternDataSize) const
+{
+    if(isPatternFormatted(patternData, patternDataSize)) {
         return true;
+    } else if(isPatternRawBitStream(patternData, patternDataSize)) {
+        return true;
+    } else if(isPatternRaw(patternData, patternDataSize)) {
+        return true;
+    } else {
+        return false; // 不明なフォーマット
+    }
+}
+
+bool
+PD777::setupPattern(const void* patternData, size_t patternDataSize)
+{
+    if(isPatternFormatted(patternData, patternDataSize)) {
+        return setupCGRomFormatted(patternData, patternDataSize);
+    } else if(isPatternRawBitStream(patternData, patternDataSize)) {
+        return setupCGRomRawBitStream(patternData, patternDataSize);
+    } else if(isPatternRaw(patternData, patternDataSize)) {
+        return setupPatternRaw(patternData, patternDataSize);
     } else {
         // 不明なフォーマット
         return false;
