@@ -566,3 +566,17 @@ PD777::setupPattern(const void* patternData, size_t patternDataSize)
         return false;
     }
 }
+
+bool
+PD777::setupConfig(const PD777Config& config777)
+{
+    config = config777;
+
+    for(auto i = 0; i < 64; ++i) {
+        tblBGtoRGB[i] = config777.BGColor[i];
+    }
+    for(auto i = 0; i < 16; ++i) {
+        tblSpriteToRGB[i] = config777.SpriteColor[i];
+    }
+    return true;
+}

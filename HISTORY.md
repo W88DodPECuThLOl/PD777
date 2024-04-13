@@ -4,6 +4,11 @@
 
 コア
 * https://github.com/W88DodPECuThLOl/PD777/issues/1 drag & dropでファイルを読み込むように
+* オプションでコンフィグファイルを読み込むように  
+  フォーマットなどは「source\win\config777.ini」を参照
+
+グラフィックス
+* https://github.com/W88DodPECuThLOl/PD777/issues/4 BGカラーの赤色を調整
 
 サウンド
 * https://github.com/W88DodPECuThLOl/PD777/issues/2 FRSの音量をFLSよりも小さく

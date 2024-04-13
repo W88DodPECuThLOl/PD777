@@ -1,4 +1,5 @@
 ﻿#include "WinPD777.h"
+#include "WinPD777Config.h"
 #include "cat/gamePad/catPad.h"
 #include "cat/audio/catLowLevelDeviceAudioXAudio2.h"
 #include "cat/decoder/cassetteVision/catAudioDecoderCassetteVision.h"
@@ -537,6 +538,12 @@ WinPD777::setupAuto(const std::optional<std::vector<u8>>& data)
         if(setup(codeData, ptnData)) {
             // 設定に成功したらリセットする
             requestReset();
+            return true; // 成功
+        }
+    }
+    WinPD777Config cnf;
+    if(cnf.parse(data.value().data(), data.value().size())) {
+        if(setupConfig(cnf.getConfig777())) [[unlikely]] {
             return true; // 成功
         }
     }

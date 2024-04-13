@@ -11,6 +11,7 @@
 #include "GraphCommand.h"
 #include "GraphCommandBuffer.h"
 #include "KeyStatus.h"
+#include "PD777Config.h"
 
 /**
  * @brief   μPD777
@@ -63,6 +64,20 @@ protected:
     Registers regs;
     Stack stack;
     Sound sound;
+
+    /**
+     * @brief BGの色変換テーブル(RGB888形式)
+     */
+    u32 tblBGtoRGB[64] {};
+    /**
+     * @brief スプライトの色変換テーブル(RGB888形式)
+     */
+    u32 tblSpriteToRGB[16] {};
+
+    /**
+     * @brief コンフィグ
+     */
+    PD777Config config;
 
     /**
      * @brief presentで使うフレームバッファ
@@ -461,6 +476,14 @@ public:
      * @brief 初期化
      */
     virtual void init();
+
+    /**
+     * @brief   コンフィグを設定する
+     * 
+     * @param[in]   config777   コンフィグ
+     * @return  成功したらtrueを返す
+     */
+    bool setupConfig(const PD777Config& config777);
 
     /**
      * @brief   対応しているコードデータかどうか

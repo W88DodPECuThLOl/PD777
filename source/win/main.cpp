@@ -9,6 +9,7 @@
 #include "cat/win/catWinWindowClassEx.h"
 #include "cat/win/catWinWindow.h"
 #include "cat/win/catCom.h"
+#include "WinPD777Config.h"
 #include <thread>
 #include <memory>
 #else
@@ -23,6 +24,7 @@ namespace {
 struct Option {
     std::wstring codeFilename;
     std::wstring patternFilename;
+    std::wstring configFilename;
     std::wstring listFilename;
     bool disassemble = false;
 
@@ -46,6 +48,9 @@ struct Option {
                     i++;
                 } else if((opt == L"ptn") && ((i + 1) < nArgs)) {
                     patternFilename = szArglist[i + 1];
+                    i++;
+                } else if((opt == L"cfg") && ((i + 1) < nArgs)) {
+                    configFilename = szArglist[i + 1];
                     i++;
                 } else if((opt == L"lst") && ((i + 1) < nArgs)) {
                     listFilename = szArglist[i + 1];
@@ -169,6 +174,11 @@ main()
     Option option;
 
     // 必要ならファイルを読み込む
+    std::optional<std::vector<u8>> configData = loadBinaryFile(option.configFilename);
+    if(!option.configFilename.empty() && !configData) [[unlikely]] {
+        printf("file load error. %ls\n", option.configFilename.c_str());
+        return -1; // 読み込みに失敗した
+    }
     std::optional<std::vector<u8>> codeData = loadBinaryFile(option.codeFilename);
     if(!option.codeFilename.empty() && !codeData) [[unlikely]] {
         printf("file load error. %ls\n", option.codeFilename.c_str());
@@ -180,11 +190,26 @@ main()
         return -1; // 読み込みに失敗した
     }
 
+    auto cnf = std::make_unique<WinPD777Config>();
+    if(!option.configFilename.empty()) {
+        // コンフィグファイルの解析
+        if(!cnf->parse(configData.value().data(), configData.value().size())) {
+            printf("config file parse error. %ls\n", option.configFilename.c_str());
+            return -1;
+        }
+    }
+
     // CPU作成とセットアップ
     std::unique_ptr<WinPD777> cpu = std::make_unique<WinPD777>();
     if(!cpu->setup(codeData, cgData)) [[unlikely]] {
         printf("cpu setup error.\n");
         return -1; // セットアップに失敗した
+    }
+    if(!option.configFilename.empty()) {
+        if(!cpu->setupConfig(cnf->getConfig777())) [[unlikely]] {
+            printf("config setup error.\n");
+            return -1;
+        }
     }
 
     if(option.disassemble) [[unlikely]] {

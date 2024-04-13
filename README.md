@@ -21,6 +21,7 @@
 |---|---|
 | -code <コードファイル名> | コードファイルを読み込む |
 | -ptn <パターンファイル名> | パターンファイルを読み込む |
+| -cfg <コンフィグファイル名> | コンフィグファイルを読み込む |
 | -disassemble | コードを逆アセンブルし終了 |
 
 ファイルのフォーマットなどは ⇒ [PD777supplement Pages](https://github.com/W88DodPECuThLOl/PD777supplement)

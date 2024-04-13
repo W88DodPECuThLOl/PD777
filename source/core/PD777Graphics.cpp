@@ -4,11 +4,12 @@ namespace {
 
 #define MakeRGB(r,g,b) ((b) | ((g) << 8) | ((r) << 16))
 
+#if false
 /**
  * @brief 背景色をRGB値へ変換するときのテーブル
  * @todo  ちゃんとした値を設定すること
  */
-static const u32 tblBGtoRGB[64] = {
+u32 tblBGtoRGB[64] = {
                                 // BRIGHTNESS:HUE:BLACK/PRIO:RGB
                                 // 0         : 0 : 0        :000
     MakeRGB(0x00, 0xAE, 0xEF),  // ブルーシアン
@@ -27,7 +28,7 @@ static const u32 tblBGtoRGB[64] = {
 
                                 // BRIGHTNESS:HUE:BLACK/PRIO:RGB
                                 // 0         : 0 : 0        :100
-    MakeRGB(208, 46, 61),       // 赤
+    MakeRGB(235, 67, 168),      // 赤
 
                                 // BRIGHTNESS:HUE:BLACK/PRIO:RGB
                                 // 0         : 0 : 0        :101
@@ -60,7 +61,7 @@ static const u32 tblBGtoRGB[64] = {
 
                                 // BRIGHTNESS:HUE:BLACK/PRIO:RGB
                                 // 0         : 0 : 1        :100
-    MakeRGB(0xFF, 0x00, 0x00),  // 赤
+    MakeRGB(235, 67, 168),      // 赤
 
                                 // BRIGHTNESS:HUE:BLACK/PRIO:RGB
                                 // 0         : 0 : 1        :101
@@ -72,6 +73,204 @@ static const u32 tblBGtoRGB[64] = {
 
                                 // BRIGHTNESS:HUE:BLACK/PRIO:BGR
                                 // 0         : 0 : 1        :111
+    MakeRGB(0xFF, 0xFF, 0xFF),  // 白
+//--------------------------------------------------------------------
+//--------------------------------------------------------------------
+                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
+                                // 0         : 1 : 0        :000
+    MakeRGB(0x00, 0xAE, 0xEF),  // ブルーシアン
+
+                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
+                                // 0         : 1 : 0        :001
+    MakeRGB(0x00, 0x00, 0xFF),  // 青
+
+                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
+                                // 0         : 1 : 0        :010
+    MakeRGB(0x00, 0xB0, 0x00),  // 緑
+
+                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
+                                // 0         : 1 : 0        :011
+    MakeRGB(0xE4, 0x00, 0x7F),  // マゼンタ
+
+                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
+                                // 0         : 1 : 0        :100
+    MakeRGB(235, 67, 168),      // 赤
+
+                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
+                                // 0         : 1 : 0        :101
+    MakeRGB(0x00, 0xA0, 0xE9),  // シアン
+
+                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
+                                // 0         : 1 : 0        :110
+    MakeRGB(0xFF, 0xFF, 0x00),  // 黄
+
+                                // BRIGHTNESS:HUE:BLACK/PRIO:BGR
+                                // 0         : 1 : 0        :111
+    MakeRGB(0xF5, 0x82, 0x20),  // オレンジ
+//--------------------------------------------------------------------
+//--------------------------------------------------------------------
+                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
+                                // 0         : 1 : 1        :000
+    MakeRGB(0x00, 0x00, 0x00),  // 黒
+
+                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
+                                // 0         : 1 : 1        :001
+    MakeRGB(0x00, 0x00, 0xFF),  // 青
+
+                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
+                                // 0         : 1 : 1        :010
+    MakeRGB(0x00, 0xB0, 0x00),  // 緑
+
+                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
+                                // 0         : 1 : 1        :011
+    MakeRGB(0xE4, 0x00, 0x7F),  // マゼンタ
+
+                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
+                                // 0         : 1 : 1        :100
+    MakeRGB(235, 67, 168),      // 赤
+
+                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
+                                // 0         : 1 : 1        :101
+    MakeRGB(0x00, 0xA0, 0xE9),  // シアン
+
+                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
+                                // 0         : 1 : 1        :110
+    MakeRGB(0xFF, 0xFF, 0x00),  // 黄
+
+                                // BRIGHTNESS:HUE:BLACK/PRIO:BGR
+                                // 0         : 1 : 1        :111
+    MakeRGB(0xFF, 0xFF, 0xFF),  // 白
+//--------------------------------------------------------------------
+//--------------------------------------------------------------------
+                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
+                                // 1         : 0 : 0        :000
+    MakeRGB(0x00, 0xAE, 0xEF),  // ブルーシアン
+
+                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
+                                // 1         : 0 : 0        :001
+    MakeRGB(0x00, 0x00, 0xFF),  // 青
+
+                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
+                                // 1         : 0 : 0        :010
+    MakeRGB(0x00, 0xB0, 0x00),  // 緑
+
+                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
+                                // 1         : 0 : 0        :011
+    MakeRGB(0xE4, 0x00, 0x7F),  // マゼンタ
+
+                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
+                                // 1         : 0 : 0        :100
+    MakeRGB(235, 67, 168),      // 赤
+
+                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
+                                // 1         : 0 : 0        :101
+    MakeRGB(0x00, 0xA0, 0xE9),  // シアン
+
+                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
+                                // 1         : 0 : 0        :110
+    MakeRGB(0xFF, 0xFF, 0x00),  // 黄
+
+                                // BRIGHTNESS:HUE:BLACK/PRIO:BGR
+                                // 1         : 0 : 0        :111
+    MakeRGB(0xF5, 0x82, 0x20),  // オレンジ
+//--------------------------------------------------------------------
+//--------------------------------------------------------------------
+                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
+                                // 1         : 0 : 1        :000
+    MakeRGB(0x00, 0x00, 0x00),  // 黒
+
+                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
+                                // 1         : 0 : 1        :001
+    MakeRGB(0x00, 0x00, 0xFF),  // 青
+
+                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
+                                // 1         : 0 : 1        :010
+    MakeRGB(0x00, 0xB0, 0x00),  // 緑
+
+                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
+                                // 1         : 0 : 1        :011
+    MakeRGB(0xE4, 0x00, 0x7F),  // マゼンタ
+
+                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
+                                // 1         : 0 : 1        :100
+    MakeRGB(235, 67, 168),      // 赤
+
+                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
+                                // 1         : 0 : 1        :101
+    MakeRGB(0x00, 0xA0, 0xE9),  // シアン
+
+                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
+                                // 1         : 0 : 1        :110
+    MakeRGB(0xFF, 0xFF, 0x00),  // 黄
+
+                                // BRIGHTNESS:HUE:BLACK/PRIO:BGR
+                                // 1         : 0 : 1        :111
+    MakeRGB(0xFF, 0xFF, 0xFF),  // 白
+//--------------------------------------------------------------------
+//--------------------------------------------------------------------
+                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
+                                // 1         : 1 : 0        :000
+    MakeRGB(0x00, 0xAE, 0xEF),  // ブルーシアン
+
+                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
+                                // 1         : 1 : 0        :001
+    MakeRGB(0x00, 0x00, 0xFF),  // 青
+
+                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
+                                // 1         : 1 : 0        :010
+    MakeRGB(0x00, 0xB0, 0x00),  // 緑
+
+                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
+                                // 1         : 1 : 0        :011
+    MakeRGB(0xE4, 0x00, 0x7F),  // マゼンタ
+
+                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
+                                // 1         : 1 : 0        :100
+    MakeRGB(235, 67, 168),      // 赤
+
+                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
+                                // 1         : 1 : 0        :101
+    MakeRGB(0x00, 0xA0, 0xE9),  // シアン
+
+                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
+                                // 1         : 1 : 0        :110
+    MakeRGB(0xFF, 0xFF, 0x00),  // 黄
+
+                                // BRIGHTNESS:HUE:BLACK/PRIO:BGR
+                                // 1         : 1 : 0        :111
+    MakeRGB(0xF5, 0x82, 0x20),  // オレンジ
+//--------------------------------------------------------------------
+//--------------------------------------------------------------------
+                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
+                                // 1         : 1 : 1        :000
+    MakeRGB(0x00, 0x00, 0x00),  // 黒
+
+                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
+                                // 1         : 1 : 1        :001
+    MakeRGB(0x00, 0x00, 0xFF),  // 青
+
+                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
+                                // 1         : 1 : 1        :010
+    MakeRGB(0x00, 0xB0, 0x00),  // 緑
+
+                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
+                                // 1         : 1 : 1        :011
+    MakeRGB(0xE4, 0x00, 0x7F),  // マゼンタ
+
+                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
+                                // 1         : 1 : 1        :100
+    MakeRGB(235, 67, 168),      // 赤
+
+                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
+                                // 1         : 1 : 1        :101
+    MakeRGB(0x00, 0xA0, 0xE9),  // シアン
+
+                                // BRIGHTNESS:HUE:BLACK/PRIO:RGB
+                                // 1         : 1 : 1        :110
+    MakeRGB(0xFF, 0xFF, 0x00),  // 黄
+
+                                // BRIGHTNESS:HUE:BLACK/PRIO:BGR
+                                // 1         : 1 : 1        :111
     MakeRGB(0xFF, 0xFF, 0xFF),  // 白
 };
 
@@ -101,6 +300,7 @@ static const u32 tblSpriteToRGB[16] = {
     MakeRGB(255, 160, 34),      // 1:110
     MakeRGB(0xD0, 0xD0, 0xD0),  // 1:111 メモ）0:111と同じ色
 };
+#endif
 
 #undef MakeRGB
 
@@ -374,7 +574,7 @@ PD777::makePresentImage()
     // -------------
     // 背景色
     // -------------
-    const auto bgColor = tblBGtoRGB[bgRGB | bgBlackPrio /* | modeHUE | modeBrightness */]; // @todo パラメータの反映、色の調整
+    const auto bgColor = tblBGtoRGB[bgRGB | bgBlackPrio | modeHUE | modeBrightness]; // @todo パラメータの反映、色の調整
     for(auto& m : frameBuffer) { m = bgColor; }
 
     // -------------
@@ -399,25 +599,27 @@ PD777::makePresentImage()
     }
     graphBuffer.reset();
 
-#if false // for DEBUG 目盛りの描画 横線
-    for(auto y = 1; y < frameBufferHeight / dotHeight; ++y) {
-        for(auto x = 0; x < frameBufferWidth; ++x) {
-            auto color = ((y & 3) == 0) ? 0xFFFFFF : 0x606060;
-            frameBuffer[x + y * dotHeight * frameBufferWidth] = color;
+    // for DEBUG 目盛りの描画 横線
+    if(config.debugDrawHorizontalLines) {
+        for(auto y = 1; y < frameBufferHeight / dotHeight; ++y) {
+            for(auto x = 0; x < frameBufferWidth; ++x) {
+                auto color = ((y & 3) == 0) ? 0xFFFFFF : 0x606060;
+                frameBuffer[x + y * dotHeight * frameBufferWidth] = color;
+            }
         }
     }
-#endif
-#if false // for DEBUG 目盛りの描画 縦線
-    for(auto x = 1; x < frameBufferWidth / dotWidth; ++x) {
-        for(auto y = 0; y < frameBufferHeight; ++y) {
-            auto color = ((x & 3) == 0) ? 0xFFFFFF : 0x606060;
-            if(x == CRT::HORIZONTAL_BLANK_END + 1) { color = 0xFF0000; } // H.BLKの境界
-            if(x == 64+5) { color = 0x0000FF; } // リピートXの境界
-            if(x == 72+5) { color = 0x0000FF; } // リピートXの境界
-            if(x == 80+5) { color = 0x0000FF; } // リピートXの境界
-            //if(x == 90)   { color = 0xFF0000; } // リピートXの境界
-            frameBuffer[x * dotWidth + y * frameBufferWidth] = color;
+    // for DEBUG 目盛りの描画 縦線
+    if(config.debugDrawVerticalLines) {
+        for(auto x = 1; x < frameBufferWidth / dotWidth; ++x) {
+            for(auto y = 0; y < frameBufferHeight; ++y) {
+                auto color = ((x & 3) == 0) ? 0xFFFFFF : 0x606060;
+                if(x == CRT::HORIZONTAL_BLANK_END + 1) { color = 0xFF0000; } // H.BLKの境界
+                if(x == 64+5) { color = 0x0000FF; } // リピートXの境界
+                if(x == 72+5) { color = 0x0000FF; } // リピートXの境界
+                if(x == 80+5) { color = 0x0000FF; } // リピートXの境界
+                //if(x == 90)   { color = 0xFF0000; } // リピートXの境界
+                frameBuffer[x * dotWidth + y * frameBufferWidth] = color;
+            }
         }
     }
-#endif
 }
