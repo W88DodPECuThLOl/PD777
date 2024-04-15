@@ -17,25 +17,25 @@ public:
 	virtual ~VoiceCallback() {}
 
 	// ボイス開始のプロセッシングパスの直前に呼び出される
-	void OnVoiceProcessingPassStart(UINT32 SamplesRequired) {}
+	STDMETHOD_(void, OnVoiceProcessingPassStart) (THIS_ UINT32 BytesRequired) override {}
 
 	// ボイスの終了のプロセッシングパスの直後に呼び出される
-	void OnVoiceProcessingPassEnd() {}
+    STDMETHOD_(void, OnVoiceProcessingPassEnd) (THIS) override {}
 
 	// ボイスが連続オーディオストリームの再生を終了したときに呼び出される
-	void OnStreamEnd() {}
+    STDMETHOD_(void, OnStreamEnd) (THIS) override {}
 
 	// ボイスが新しいオーディオバッファーの処理を開始しようとするときに呼び出される
-	void OnBufferStart(void * pBufferContext) {}
+    STDMETHOD_(void, OnBufferStart) (THIS_ void* pBufferContext) override {}
 
 	// ボイスがバッファーの処理を終了したときに呼び出される
-	void OnBufferEnd(void * pBufferContext);
+    STDMETHOD_(void, OnBufferEnd) (THIS_ void* pBufferContext) override;
 
 	// ボイスがループの最後に到達したときに呼び出される
-	void OnLoopEnd(void * pBufferContext) {}
+    STDMETHOD_(void, OnLoopEnd) (THIS_ void* pBufferContext) override {}
 
 	// ボイスの処理中に重大なエラーが発生したときに呼び出される
-	void OnVoiceError(void * pBufferContext, HRESULT Error) {}
+    STDMETHOD_(void, OnVoiceError) (THIS_ void* pBufferContext, HRESULT Error) override {}
 };
 
 } // namespace cat::core::snd::XAudio2
