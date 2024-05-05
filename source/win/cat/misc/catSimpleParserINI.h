@@ -1,4 +1,8 @@
-﻿#pragma once
+﻿/**
+ * @file    catSimpleParserINI.h
+ * @brief   INIファイルの簡易パーサー
+ */
+#pragma once
 
 #include "../../../core/catLowBasicTypes.h"
 
@@ -13,20 +17,31 @@ class SimpleParserINI {
     static constexpr c8 PARAM_SEPARATOR = u8'=';
     static constexpr c8 SECTION_START = u8'[';
     static constexpr c8 SECTION_END = u8']';
+    static constexpr c8 DOUBLE_QUAUT = u8'"';
+    static constexpr c8 SINGLE_QUAUT = u8'\'';
 
-    inline bool chechNewLineAndProgress(const c8*& ch) {
+    inline bool chechNewLineAndProgress(const c8* end, const c8*& ch) const noexcept {
+        if(ch == end) [[unlikely]] { return false; }
         if(*ch == CR) {
-            if(ch[1] == LF) {
+            ch++;
+            if((ch == end) && (ch[1] == LF)) {
                 // CR+LF
-                ch += 2;
+                ch++;
                 return true;
             }
-            ch++;
             return true;
         }
         return *ch++ == LF;
     }
-    inline bool isSpace(const c8 ch) {
+    /**
+     * @brief 空白文字かどうか
+     * 
+     * @return  空白文字かどうか
+     * @retval  true:   空白文字
+     * @retval  false:  空白文字ではない
+     * @note    空白文字は、スペース、タブ、改行。
+     */
+    inline bool isSpace(const c8 ch) const noexcept {
         return (ch == SP) || (ch == TAB) || (ch == CR) || (ch == LF);
     }
 protected:
@@ -53,8 +68,8 @@ protected:
     }
     template<typename T>
     bool removeQuaut(const T*& start, const T*& end) {
-        if(removeQuaut(start, end, u8'"')) { return true; }
-        return removeQuaut(start, end, u8'\'');
+        if(removeQuaut(start, end, DOUBLE_QUAUT)) { return true; }
+        return removeQuaut(start, end, SINGLE_QUAUT);
     }
 protected:
     /**
@@ -64,10 +79,10 @@ protected:
      * @param[in]   endSectionName      セクション名の終了ポインタ
      * @return  処理を続けるかどうか
      * @retval  true:  処理を続ける
-     * @retval  false: 処理をやめる
+     * @retval  false: 処理をやめて失敗させる
      * @note 文字列の範囲は[beginSectionName endSectionName)でendSectionNameを含まない
      */
-    virtual bool doSection(const c8* beginSectionName, const c8* SectionName) { return true; }
+    virtual bool doSection(const c8* beginSectionName, const c8* endSectionName) { return true; }
     /**
      * @brief   パラメータがあったときに呼び出される
      * 
@@ -77,7 +92,7 @@ protected:
      * @param[in]   endParameter            パラメータの終了ポインタ
      * @return  処理を続けるかどうか
      * @retval  true:  処理を続ける
-     * @retval  false: 処理をやめる
+     * @retval  false: 処理をやめて失敗させる
      * @note 文字列の範囲は[beginParameterName endParameterName)でendParameterNameを含まない
      */
     virtual bool doParameter(const c8* beginParameterName, const c8* endParameterName, const c8* beginParameter, const c8* endParameter) { return true; }
@@ -88,6 +103,7 @@ public:
     /**
      * @brief INIファイルをパースする
      * 
+     * - セミコロン以降はコメントになる。
      * - セクションがあったらdoSection()を呼び出す。
      * - パラメータがあったらdoParameter()を呼び出す。
      * - 前後のスペースなども含まれるので、適時トリムして使用する
@@ -97,6 +113,7 @@ public:
      *       みたいになっていたら"Param1   "、"   a"となる。
      *   例）Param 2= 2        ; comment
      *       みたいになっていたら"Param 2"、" 2        "となる。
+     * - ファイル先頭のBOMはスキップされる
      * 
      * @param[in]   data        データ
      * @param[in]   dataSize    データサイズ
@@ -112,29 +129,28 @@ public:
         auto end = p + dataSize;
 
         if((dataSize >= 3) && (p[0] == 0xEF) && (p[1] == 0xBB) && (p[2] == 0xBF)) {
-            // BOM
-            p += 3;
+            p += 3; // BOMをスキップ
         }
-        while(isSpace(*p)) { ++p; }
+        while((p != end) && isSpace(*p)) { ++p; }
         while(*p && p != end) {
-            if(*p == 0) {
-                break;
-            } else if(*p == SECTION_START) {
+            if(*p == SECTION_START) {
                 // セクション
                 auto beginSection = ++p;
                 // セクションの終わりを探す
+                if(p == end) [[unlikely]] { return false; }
                 while(*p != SECTION_END) {
-                    if(*p == 0 || *p == CR || *p == LF) [[unlikely]] {
+                    if((*p == 0) || (*p == CR) || (*p == LF)) [[unlikely]] {
                         return false; // 途中で終わってしまった
                     }
                     ++p;
+                    if(p == end) [[unlikely]] { return false; }
                 }
                 if(!doSection(beginSection, p)) [[unlikely]] { return false; }
                 ++p;
-                while(*p && !chechNewLineAndProgress(p)) {} // 行末までスキップ
+                while((p != end) && *p && !chechNewLineAndProgress(end, p)) {} // 行末までスキップ
             } else if(*p == COMMENT) {
                 // コメント
-                while(*p && !chechNewLineAndProgress(p)) {} // 行末までスキップ
+                while((p != end) && *p && !chechNewLineAndProgress(end, p)) {} // 行末までスキップ
             } else {
                 // パラメータ
                 auto beginParameterName = p;
@@ -143,15 +159,16 @@ public:
                         return false; // 途中で終わってしまった
                     }
                     ++p;
+                    if(p == end) [[unlikely]] { return false; }
                 }
                 auto endParameterName = p;
                 auto beginParameter = ++p;
-                while(*p && *p != COMMENT && *p != CR && *p != LF) { p++; }
+                while((p != end) && *p && (*p != COMMENT) && (*p != CR) && (*p != LF)) { p++; }
                 if(!doParameter(beginParameterName, endParameterName, beginParameter, p)) [[unlikely]] {
                     return false;
                 }
             }
-            while(isSpace(*p)) { ++p; }
+            while((p != end) && isSpace(*p)) { ++p; }
         }
         return true;
     }
