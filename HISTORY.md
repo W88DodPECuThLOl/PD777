@@ -8,7 +8,9 @@
   フォーマットなどは「source\win\config777.ini」を参照
 
 グラフィックス
-* https://github.com/W88DodPECuThLOl/PD777/issues/4 BGカラーの赤色を調整
+* BGカラーを全体的に調整
+  * https://github.com/W88DodPECuThLOl/PD777/issues/4 BGカラーの赤色を調整
+  * https://github.com/W88DodPECuThLOl/PD777/issues/5 BGカラーの青色を調整
 
 サウンド
 * https://github.com/W88DodPECuThLOl/PD777/issues/2 FRSの音量をFLSよりも小さく
