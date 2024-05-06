@@ -25,7 +25,7 @@ protected:
      * @retval  false: 処理をやめる
      * @note 文字列の範囲は[beginSectionName endSectionName)でendSectionNameを含まない
      */
-    virtual bool doSection(const c8* beginSectionName, const c8* SectionName) override;
+    virtual bool doSection(const c8* beginSectionName, const c8* endSectionName) override;
     /**
      * @brief   パラメータがあったときに呼び出される
      * 
