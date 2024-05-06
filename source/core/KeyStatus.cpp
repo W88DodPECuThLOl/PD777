@@ -6,14 +6,14 @@ KeyStatus::KeyStatus()
 }
 
 void
-KeyStatus::setCourseSwitch(const u8 courseSwitch)
+KeyStatus::setCourseSwitch(const u8 courseSwitch) noexcept
 {
     switch(courseSwitch) {
-        case 1: a12 = (u8)0x01; break; // コーススイッチ1
-        case 2: a12 = (u8)0x02; break; // コーススイッチ2
-        case 3: a12 = (u8)0x04; break; // コーススイッチ3
-        case 4: a12 = (u8)0x08; break; // コーススイッチ4
-        case 5: a12 = (u8)0x10; break; // コーススイッチ5
+        case 1: a12 = (u8)KIN::LL; break;
+        case 2: a12 = (u8)KIN::L; break;
+        case 3: a12 = (u8)KIN::C; break;
+        case 4: a12 = (u8)KIN::R; break;
+        case 5: a12 = (u8)KIN::RR; break;
         default:
             a12 = 0;
             break;
