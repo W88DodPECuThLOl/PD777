@@ -1,6 +1,6 @@
 # 更新履歴
 
-## verX.XX.XX
+## ver1.00.00
 
 コア
 * https://github.com/W88DodPECuThLOl/PD777/issues/1 drag & dropでファイルを読み込むように
