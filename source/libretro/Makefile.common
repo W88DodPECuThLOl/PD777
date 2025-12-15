@@ -1,0 +1,5 @@
+SOURCES_CXX_CORE := ../core/Decoder.cpp ../core/Disassembler.cpp ../core/KeyStatus.cpp ../core/PD777.cpp ../core/PD777Config.cpp ../core/PD777Graphics.cpp ../core/rom.cpp ../core/romSetup.cpp ../core/Stack.cpp
+
+SOURCES_CXX_CATLIB := $(CORE_DIR)/cat/catAudio.cpp
+
+SOURCES_CXX := $(CORE_DIR)/libretro.cpp $(CORE_DIR)/LibretroPD777.cpp $(SOURCES_CXX_CORE) $(SOURCES_CXX_CATLIB)

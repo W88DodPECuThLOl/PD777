@@ -1,4 +1,4 @@
-﻿#include "PD777.h"
+#include "PD777.h"
 
 #if defined(_WIN32)
 #include <string>
@@ -236,7 +236,7 @@ PD777::setupCode(const void* data, size_t dataSize)
     if(!isCodeData(data, dataSize)) {
         return false;
     }
-
+   
     for(auto& r : rom) { r = ~0; }
     keyMapping.bitMap[0] = 0x40;            // B09 => K7
     keyMapping.bitMap[1] = 0x20;            // B10 => K6
@@ -473,7 +473,7 @@ PD777::isPatternFormatted(const void* patternData, const size_t patternDataSize)
     for(auto i = 0; i < 20; ++i) {
         if(header[i] != magicNumber[i]) return false;
     }
-    return false;
+    return true;
 }
 
 bool
