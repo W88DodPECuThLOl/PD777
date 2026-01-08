@@ -72,8 +72,10 @@ typedef std::uint64_t size_t;
 #else
 
 // VC++
+// Linux, macOS, etc.
 
 #include <cstdint>
+#include <stdlib.h>
 
 // 基本的な型
 typedef std::int8_t   s8;
