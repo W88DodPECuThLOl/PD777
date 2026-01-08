@@ -473,7 +473,7 @@ PD777::isPatternFormatted(const void* patternData, const size_t patternDataSize)
     for(auto i = 0; i < 20; ++i) {
         if(header[i] != magicNumber[i]) return false;
     }
-    return false;
+    return true;
 }
 
 bool
