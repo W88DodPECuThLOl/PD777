@@ -1,4 +1,4 @@
-SOURCES_CXX_CORE := ../core/Decoder.cpp ../core/Disassembler.cpp ../core/KeyStatus.cpp ../core/PD777.cpp ../core/PD777Config.cpp ../core/PD777Graphics.cpp ../core/rom.cpp ../core/romSetup.cpp ../core/Stack.cpp
+SOURCES_CXX_CORE := $(CORE_DIR)/../core/Decoder.cpp $(CORE_DIR)/../core/Disassembler.cpp $(CORE_DIR)/../core/KeyStatus.cpp $(CORE_DIR)/../core/PD777.cpp $(CORE_DIR)/../core/PD777Config.cpp $(CORE_DIR)/../core/PD777Graphics.cpp $(CORE_DIR)/../core/rom.cpp $(CORE_DIR)/../core/romSetup.cpp $(CORE_DIR)/../core/Stack.cpp
 
 SOURCES_CXX_CATLIB := $(CORE_DIR)/cat/catAudio.cpp
 

@@ -213,7 +213,7 @@ void retro_set_environment(retro_environment_t cb)
         log_cb = fallback_log;
 
     static const struct retro_controller_description controllers[] = {
-        { "Nintendo DS", RETRO_DEVICE_SUBCLASS(RETRO_DEVICE_JOYPAD, 0) },
+        { "Cassette Vision controller", RETRO_DEVICE_SUBCLASS(RETRO_DEVICE_ANALOG, 0) },
     };
 
     static const struct retro_controller_info ports[] = {
@@ -277,36 +277,86 @@ static void update_input(void)
      */
     KeyStatus *keyStatus = cpu->getKeyStatus();
     keyStatus->clear();
+    keyStatus->setCourseSwitch(cpu->getCourseSwitch());
 
+    // The Cassette Vision had a bunch of central controls, rather than
+    // per-player pads --- some games would asymmetrically assign most buttons
+    // to Player 2, for example.  The following mapping should allow playing
+    // pretty much all 1-player games with 1 pad, and all 2-player games with
+    // 2 pads.
+    auto NUM_CONTROLLERS = 2;
+    // Both pads get access to most of the simple buttons.
     unsigned pad = 0;
+    for (pad=0; pad<NUM_CONTROLLERS; pad++) {
+        if (input_state_cb((pad), RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_START))
+            keyStatus->setGameStartKey();
+        if (input_state_cb((pad), RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_SELECT))
+            keyStatus->setGameSelectKey();
+        if (input_state_cb((pad), RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R))
+            keyStatus->setAux();
+        if (input_state_cb((pad), RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_X))
+            keyStatus->setPush1();
+        if (input_state_cb((pad), RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B))
+            keyStatus->setPush2();
+        if (input_state_cb((pad), RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_Y))
+            keyStatus->setPush3();
+        if (input_state_cb((pad), RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_A))
+            keyStatus->setPush4();
 
-    if (input_state_cb((pad), RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_START))
-        keyStatus->setGameStartKey();
-    if (input_state_cb((pad), RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_SELECT))
-        keyStatus->setGameSelectKey();
-    if (input_state_cb((pad), RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_X))
-        keyStatus->setPush1();
-    if (input_state_cb((pad), RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B))
-        keyStatus->setPush2();
-    if (input_state_cb((pad), RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_Y))
-        keyStatus->setPush3();
-    if (input_state_cb((pad), RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_A))
-        keyStatus->setPush4();
+        // Up and Down do not exist on the actual device; they get remapped for convenience.
+        if (input_state_cb((pad), RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_UP))
+            keyStatus->setUp();
+        if (input_state_cb((pad), RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_DOWN))
+            keyStatus->setDown();
+
+        // Use D-pad Up and Down to control the Course Switch, used for things
+        // like aiming pitching in New Baseball.
+        // メモ）コーススイッチをデジタルパッドの上下で切り替える
+        {
+            u8 courseSwitch = cpu->getCourseSwitch();
+            if (input_state_cb((pad), RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_UP)) {
+                if(courseSwitch < 5) {
+                    courseSwitch++;
+                    cpu->setCourseSwitch(courseSwitch);
+                }
+            }
+            if (input_state_cb((pad), RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_DOWN)) {
+                if(courseSwitch > 1) {
+                    courseSwitch--;
+                    cpu->setCourseSwitch(courseSwitch);
+                }
+            }
+        }
+    }
+
+    // First controller gets left two paddles, for 1-player analog games.  Also
+    // lever switch 1, heavily used in 1-player games and for player 1 of
+    // 2-player games.
+    pad = 0;
+    cpu->analogStatus.input_analog_left_x[pad] = input_state_cb( (pad), RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT,
+            RETRO_DEVICE_ID_ANALOG_X);
+
+    cpu->analogStatus.input_analog_left_y[pad] = input_state_cb( (pad), RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT,
+            RETRO_DEVICE_ID_ANALOG_Y);
 
     if (input_state_cb((pad), RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_LEFT))
         keyStatus->setLeverSwitch1Left();
     if (input_state_cb((pad), RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_RIGHT))
         keyStatus->setLeverSwitch1Right();
 
-    // Up and Down do not exist on the actual device; they get remapped for convenience.
-    if (input_state_cb((pad), RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_UP))
-        keyStatus->setUp();
-    if (input_state_cb((pad), RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_DOWN))
-        keyStatus->setDown();
+    // Second controller gets right two paddles, for most 2-player analog games.
+    // Also lever switch 2.
+    pad = 1;
+    cpu->analogStatus.input_analog_left_x[pad] = input_state_cb( (pad), RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT,
+            RETRO_DEVICE_ID_ANALOG_X);
 
-    // TODO (mittonk): Course switch, maybe inc/dec via L and R?
-    // TODO (mittonk): Lever switch 2
-    // TODO (mittonk): AUX switch
+    cpu->analogStatus.input_analog_left_y[pad] = input_state_cb( (pad), RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT,
+            RETRO_DEVICE_ID_ANALOG_Y);
+
+    if (input_state_cb((pad), RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_LEFT))
+        keyStatus->setLeverSwitch2Left();
+    if (input_state_cb((pad), RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_RIGHT))
+        keyStatus->setLeverSwitch2Right();
 
 }
 
@@ -411,10 +461,23 @@ std::optional<std::vector<u8>> loadBinaryFile(const std::string& filename)
 bool retro_load_game(const struct retro_game_info *info)
 {
     struct retro_input_descriptor desc[] = {
-        { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_LEFT,  "Left" },
-        { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_UP,    "Up" },
-        { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_DOWN,  "Down" },
-        { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_RIGHT, "Right" },
+        // Controller 2 gets Levers Switch 2 left/right, not easy to summarize here.
+        { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_LEFT,  "Lever Switch 1 Left" },
+        { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_UP,    "Course Switch Up" },
+        { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_DOWN,  "Course Switch Down" },
+        { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_RIGHT, "Lever Switch 1 Right" },
+        { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_SELECT, "Select" },
+        { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_START,  "Start" },
+        { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_A,  "Push4" },
+        { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B,  "Push2" },
+        { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_X,  "Push1" },
+        { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_Y,  "Push3" },
+        { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R,  "AUX" },
+
+        // Controller 2 gets Paddle 3 and 4, not easy to summarize here.
+        { 0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_X, "Paddle 2" },
+        { 0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_Y, "Paddle 1" },
+
         { 0 },
     };
 
