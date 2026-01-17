@@ -7,6 +7,8 @@
 #include <optional>
 #include <regex>
 
+#include "libretro_core_options.h"
+
 #include <stdio.h>
 #if defined(_WIN32) && !defined(_XBOX)
 #include <windows.h>
@@ -20,6 +22,7 @@
 #define VIDEO_WIDTH 375
 #define VIDEO_HEIGHT 240
 #define VIDEO_PIXELS VIDEO_WIDTH * VIDEO_HEIGHT
+#define RETRO_DEVICE_LIGHTGUN_CASSETTE_VISION RETRO_DEVICE_SUBCLASS(RETRO_DEVICE_LIGHTGUN, 0)
 
 static uint8_t *frame_buf;
 static struct retro_log_callback logging;
@@ -106,7 +109,7 @@ static void fallback_log(enum retro_log_level level, const char *fmt, ...)
 }
 
 
-static retro_environment_t environ_cb;
+retro_environment_t environ_cb;
 
 void initialize()
 {
@@ -185,7 +188,7 @@ retro_video_refresh_t video_cb;
 retro_audio_sample_t audio_cb;
 static retro_audio_sample_batch_t audio_batch_cb;
 static retro_input_poll_t input_poll_cb;
-static retro_input_state_t input_state_cb;
+retro_input_state_t input_state_cb;
 
 void retro_get_system_av_info(struct retro_system_av_info *info)
 {
@@ -205,7 +208,10 @@ void retro_get_system_av_info(struct retro_system_av_info *info)
 
 void retro_set_environment(retro_environment_t cb)
 {
+    bool option_cats_supported = false;
     environ_cb = cb;
+    libretro_set_core_options(environ_cb,
+            &option_cats_supported);
 
     if (cb(RETRO_ENVIRONMENT_GET_LOG_INTERFACE, &logging))
         log_cb = logging.log;
@@ -214,6 +220,7 @@ void retro_set_environment(retro_environment_t cb)
 
     static const struct retro_controller_description controllers[] = {
         { "Cassette Vision controller", RETRO_DEVICE_SUBCLASS(RETRO_DEVICE_ANALOG, 0) },
+		{ "Cassette Vision lightgun", RETRO_DEVICE_LIGHTGUN_CASSETTE_VISION },
     };
 
     static const struct retro_controller_info ports[] = {
@@ -266,104 +273,22 @@ void retro_reset(void)
 
 static void update_input(void)
 {
-    /**
-     * K1  K2  K3  K4  K5  K6  K7
-     * ----------------------------------------
-     * STA L1L L1R SEL AUX 6   7    | [A08]
-     * 1   L2L L2R 4   5   6   7    | [A09]
-     * 1   2   3   4   5   P4  P3   | [A10]
-     * 1   2   3   4   5   P2  P1   | [A11]
-     * LL  L   C   R   RR  6   7    | [A12]
-     */
-    KeyStatus *keyStatus = cpu->getKeyStatus();
-    keyStatus->clear();
-    keyStatus->setCourseSwitch(cpu->getCourseSwitch());
-
-    // The Cassette Vision had a bunch of central controls, rather than
-    // per-player pads --- some games would asymmetrically assign most buttons
-    // to Player 2, for example.  The following mapping should allow playing
-    // pretty much all 1-player games with 1 pad, and all 2-player games with
-    // 2 pads.
-    auto NUM_CONTROLLERS = 2;
-    // Both pads get access to most of the simple buttons.
-    unsigned pad = 0;
-    for (pad=0; pad<NUM_CONTROLLERS; pad++) {
-        if (input_state_cb((pad), RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_START))
-            keyStatus->setGameStartKey();
-        if (input_state_cb((pad), RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_SELECT))
-            keyStatus->setGameSelectKey();
-        if (input_state_cb((pad), RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R))
-            keyStatus->setAux();
-        if (input_state_cb((pad), RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_X))
-            keyStatus->setPush1();
-        if (input_state_cb((pad), RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B))
-            keyStatus->setPush2();
-        if (input_state_cb((pad), RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_Y))
-            keyStatus->setPush3();
-        if (input_state_cb((pad), RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_A))
-            keyStatus->setPush4();
-
-        // Up and Down do not exist on the actual device; they get remapped for convenience.
-        if (input_state_cb((pad), RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_UP))
-            keyStatus->setUp();
-        if (input_state_cb((pad), RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_DOWN))
-            keyStatus->setDown();
-
-        // Use D-pad Up and Down to control the Course Switch, used for things
-        // like aiming pitching in New Baseball.
-        // メモ）コーススイッチをデジタルパッドの上下で切り替える
-        {
-            u8 courseSwitch = cpu->getCourseSwitch();
-            if (input_state_cb((pad), RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_UP)) {
-                if(courseSwitch < 5) {
-                    courseSwitch++;
-                    cpu->setCourseSwitch(courseSwitch);
-                }
-            }
-            if (input_state_cb((pad), RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_DOWN)) {
-                if(courseSwitch > 1) {
-                    courseSwitch--;
-                    cpu->setCourseSwitch(courseSwitch);
-                }
-            }
-        }
-    }
-
-    // First controller gets left two paddles, for 1-player analog games.  Also
-    // lever switch 1, heavily used in 1-player games and for player 1 of
-    // 2-player games.
-    pad = 0;
-    cpu->analogStatus.input_analog_left_x[pad] = input_state_cb( (pad), RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT,
-            RETRO_DEVICE_ID_ANALOG_X);
-
-    cpu->analogStatus.input_analog_left_y[pad] = input_state_cb( (pad), RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT,
-            RETRO_DEVICE_ID_ANALOG_Y);
-
-    if (input_state_cb((pad), RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_LEFT))
-        keyStatus->setLeverSwitch1Left();
-    if (input_state_cb((pad), RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_RIGHT))
-        keyStatus->setLeverSwitch1Right();
-
-    // Second controller gets right two paddles, for most 2-player analog games.
-    // Also lever switch 2.
-    pad = 1;
-    cpu->analogStatus.input_analog_left_x[pad] = input_state_cb( (pad), RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT,
-            RETRO_DEVICE_ID_ANALOG_X);
-
-    cpu->analogStatus.input_analog_left_y[pad] = input_state_cb( (pad), RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT,
-            RETRO_DEVICE_ID_ANALOG_Y);
-
-    if (input_state_cb((pad), RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_LEFT))
-        keyStatus->setLeverSwitch2Left();
-    if (input_state_cb((pad), RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_RIGHT))
-        keyStatus->setLeverSwitch2Right();
-
+    cpu->updateKey();
 }
 
 
 static void check_variables(void)
 {
+   struct retro_variable var = {0};
 
+   var.key = "pd777_announce_course_switch";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      bool announce_course_switch = !strcmp(var.value, "enabled") ? true : false;
+      cpu->announce_course_switch = announce_course_switch;
+      log_cb(RETRO_LOG_INFO, "Key -> Val: %s -> %s.\n", var.key, var.value);
+   }
 }
 
 static void audio_callback(void)
@@ -461,7 +386,6 @@ std::optional<std::vector<u8>> loadBinaryFile(const std::string& filename)
 bool retro_load_game(const struct retro_game_info *info)
 {
     struct retro_input_descriptor desc[] = {
-        // Controller 2 gets Levers Switch 2 left/right, not easy to summarize here.
         { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_LEFT,  "Lever Switch 1 Left" },
         { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_UP,    "Course Switch Up" },
         { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_DOWN,  "Course Switch Down" },
@@ -473,10 +397,26 @@ bool retro_load_game(const struct retro_game_info *info)
         { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_X,  "Push1" },
         { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_Y,  "Push3" },
         { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R,  "AUX" },
-
-        // Controller 2 gets Paddle 3 and 4, not easy to summarize here.
+        // Paddle assignments are based on Big Sports 12, especially making 2-paddle-as-xy-controls
+        // feel natural on an analog stick.
         { 0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_X, "Paddle 2" },
         { 0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_Y, "Paddle 1" },
+
+        // Controller 2 gets Levers Switch 2 left/right and Paddles 3 & 4.
+        { 1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_LEFT,  "Lever Switch 2 Left" },  // P2
+        { 1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_UP,    "Course Switch Up" },
+        { 1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_DOWN,  "Course Switch Down" },
+        { 1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_RIGHT, "Lever Switch 2 Right" },  // P2
+        { 1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_SELECT, "Select" },
+        { 1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_START,  "Start" },
+        { 1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_A,  "Push4" },
+        { 1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B,  "Push2" },
+        { 1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_X,  "Push1" },
+        { 1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_Y,  "Push3" },
+        { 1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R,  "AUX" },
+
+        { 1, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_X, "Paddle 3" },  // P2
+        { 1, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_Y, "Paddle 4" },  // P2
 
         { 0 },
     };
